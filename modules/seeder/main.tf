@@ -156,6 +156,8 @@ resource "aws_lambda_function" "seeder" {
 #   • function_name : the Lambda itself was replaced
 #   • lambda_hash   : the handler code or its dependencies changed
 resource "terraform_data" "invoke_seeder" {
+  count = var.invoke_on_apply ? 1 : 0
+
   # Re-runs when row count changes, RDS is replaced, or Lambda code changes.
   triggers_replace = [
     var.row_count,

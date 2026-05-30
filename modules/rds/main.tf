@@ -128,6 +128,8 @@ resource "aws_db_instance" "main" {
   # automatically. Terraform never sees or stores the password, so it cannot
   # appear in the state file. The secret ARN is exposed via an output so the
   # seeder Lambda can retrieve the password at runtime.
+  snapshot_identifier = var.snapshot_identifier
+
   manage_master_user_password = true
 
   allocated_storage = var.db_storage_gb

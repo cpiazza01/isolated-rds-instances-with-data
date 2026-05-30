@@ -82,6 +82,60 @@ databricks_vpc_cidr            = "10.1.0.0/16"
 databricks_peering_auto_accept = false  # true only if same AWS account
 ```
 
+**Seeder** — three knobs control seeder behaviour:
+
+```hcl
+enable_seeder  = false  # don't deploy the Lambda at all
+seed_on_apply  = false  # deploy the Lambda but don't auto-invoke on apply
+snapshot_identifier = "snap-xxx"  # deploy the Lambda but skip auto-invoke (snapshot takes precedence)
+```
+
+| `enable_seeder` | `seed_on_apply` | `snapshot_identifier` | Lambda deployed | Auto-invoked |
+|---|---|---|---|---|
+| `true` | `true` | `null` | ✓ | ✓ default |
+| `true` | `false` | `null` | ✓ | ✗ manual only |
+| `true` | `true` | set | ✓ | ✗ snapshot takes precedence |
+| `false` | — | — | ✗ | ✗ |
+
+## Loading real data
+
+Two ways to populate the RDS instance with data from an existing database.
+
+**Option A — RDS snapshot restore (bootstraps a new instance from a snapshot):**
+
+Set `snapshot_identifier` before the first `terraform apply`. AWS creates the instance from the snapshot; `db_name` and `db_username` are inherited from the snapshot, not from the corresponding variables.
+
+```hcl
+snapshot_identifier = "arn:aws:rds:us-east-1:123456789012:snapshot:my-snapshot"
+# or a manual snapshot ID: "my-snapshot-id"
+```
+
+The snapshot must be in the same AWS region and accessible to this account (either owned by it or explicitly shared). Changing `snapshot_identifier` after initial apply replaces the RDS instance (destructive — Terraform will warn before proceeding).
+
+**Option B — pg_dump / mysqldump into an existing instance (no Terraform changes needed):**
+
+First establish a network path to RDS using either the bastion SSH tunnel or Client VPN (see Optional features above), then use standard dump/restore tools.
+
+Via bastion:
+```bash
+# Open tunnel (keep this terminal open)
+ssh -N -L 5432:$(terraform output -raw db_host):5432 ec2-user@$(terraform output -raw bastion_public_ip)
+
+# In another terminal — dump from source, restore through tunnel
+pg_dump -h <source-host> -U <source-user> -d <source-db> | \
+  psql -h localhost -p 5432 -U dbadmin -d appdb
+
+# MySQL equivalent
+mysqldump -h <source-host> -u <source-user> -p <source-db> | \
+  mysql -h 127.0.0.1 -P 3306 -u dbadmin -p appdb
+```
+
+Via Client VPN (once connected, the RDS hostname resolves directly):
+```bash
+pg_dump -h <source-host> -U <source-user> -d <source-db> | \
+  psql -h $(terraform output -raw db_host) -U dbadmin -d appdb
+```
+
 ## Commands
 
 ```bash

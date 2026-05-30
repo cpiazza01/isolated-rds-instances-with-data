@@ -137,6 +137,9 @@ A working example lives in [examples/basic/](examples/basic/).
 | `db_name` | `string` | `"appdb"` | Database name created on the instance |
 | `db_username` | `string` | `"dbadmin"` | Master username |
 | `db_storage_gb` | `number` | `20` | Allocated storage in GiB (gp3, cannot be shrunk after creation) |
+| `enable_seeder` | `bool` | `true` | Deploy and invoke the seeder Lambda — set `false` to skip seeding entirely (e.g. when loading data manually or restoring from a snapshot) |
+| `seed_on_apply` | `bool` | `true` | Auto-invoke the seeder on every apply — set `false` to deploy the Lambda without running it automatically (manual control over when seeding happens) |
+| `snapshot_identifier` | `string` | `null` | RDS snapshot ARN or identifier to restore from — when set, `db_name` and `db_username` are inherited from the snapshot and the seeder Lambda is deployed but not auto-invoked |
 | `skip_final_snapshot` | `bool` | `true` | Skip snapshot on destroy — set `false` for production-like stacks |
 | `row_count` | `number` | `1000` | Rows to seed into the `users` table (1 – 1,000,000) |
 | `db_deletion_protection` | `bool` | `false` | Prevent accidental deletion of the RDS instance — set `true` for staging/production |
@@ -262,6 +265,48 @@ imported by the Lambda handler are all derived from `db_engine` automatically.
 
 **Note:** changing `db_engine` after initial apply replaces the RDS instance
 (a destructive change). Terraform will warn you before proceeding.
+
+---
+
+## Loading real data
+
+Two ways to populate the RDS instance with data from an existing database.
+
+### Option A — RDS snapshot restore
+
+Set `snapshot_identifier` before the first `terraform apply`. AWS creates the instance from the snapshot; `db_name` and `db_username` are inherited from the snapshot rather than from the corresponding variables.
+
+```hcl
+snapshot_identifier = "arn:aws:rds:us-east-1:123456789012:snapshot:my-snapshot"
+# or a manual snapshot ID: "my-snapshot-id"
+```
+
+The snapshot must be in the same AWS region and accessible to this account (owned by it or explicitly shared). Changing `snapshot_identifier` on an already-deployed instance replaces it — Terraform will show a destructive plan and require confirmation before proceeding.
+
+### Option B — pg_dump / mysqldump
+
+No Terraform changes needed. First establish a network path using either the bastion SSH tunnel or Client VPN (see [Optional features](#optional-features) in CLAUDE.md), then use standard dump/restore tools.
+
+**Via bastion SSH tunnel:**
+```bash
+# Open the tunnel (keep this terminal open)
+ssh -N -L 5432:$(terraform output -raw db_host):5432 \
+  ec2-user@$(terraform output -raw bastion_public_ip)
+
+# Dump from source, restore through tunnel
+pg_dump -h <source-host> -U <source-user> -d <source-db> | \
+  psql -h localhost -p 5432 -U dbadmin -d appdb
+
+# MySQL equivalent
+mysqldump -h <source-host> -u <source-user> -p <source-db> | \
+  mysql -h 127.0.0.1 -P 3306 -u dbadmin -p appdb
+```
+
+**Via Client VPN** (once connected, the RDS hostname resolves directly):
+```bash
+pg_dump -h <source-host> -U <source-user> -d <source-db> | \
+  psql -h $(terraform output -raw db_host) -U dbadmin -d appdb
+```
 
 ---
 

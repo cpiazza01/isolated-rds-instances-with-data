@@ -54,8 +54,8 @@ output "db_port" {
 # without re-applying the whole stack:
 #   aws lambda invoke --function-name <name> response.json
 output "seeder_lambda_name" {
-  description = "Name of the seeder Lambda function."
-  value       = module.seeder.lambda_function_name
+  description = "Name of the seeder Lambda function. null when enable_seeder = false."
+  value       = var.enable_seeder ? module.seeder[0].lambda_function_name : null
 }
 
 # ── Bastion ───────────────────────────────────────────────────────────────────

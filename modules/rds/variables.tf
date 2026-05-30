@@ -55,6 +55,12 @@ variable "db_storage_gb" {
   type        = number
 }
 
+variable "snapshot_identifier" {
+  description = "ARN or identifier of an RDS snapshot to restore from. When set, the instance is created from the snapshot instead of fresh. db_name and db_username are inherited from the snapshot."
+  type        = string
+  default     = null
+}
+
 variable "skip_final_snapshot" {
   description = "Skip the final snapshot on destroy. Set false for anything resembling production."
   type        = bool

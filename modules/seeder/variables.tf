@@ -57,3 +57,9 @@ variable "row_count" {
   description = "Number of rows to insert into the users table."
   type        = number
 }
+
+variable "invoke_on_apply" {
+  description = "When false, the Lambda is deployed but not automatically invoked during apply. Set false when restoring from a snapshot to preserve the restored data."
+  type        = bool
+  default     = true
+}

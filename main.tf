@@ -30,6 +30,7 @@ module "vpc" {
 # the RDS hostname that only exists after RDS is created). See CLAUDE.md.
 
 resource "aws_security_group" "seeder_lambda" {
+  count       = var.enable_seeder ? 1 : 0
   name_prefix = "${var.name_prefix}-seeder-"
   vpc_id      = module.vpc.vpc_id
   description = "Seeder Lambda — restricted egress to RDS port and Secrets Manager endpoint"
@@ -138,30 +139,32 @@ module "rds" {
   subnet_ids  = module.vpc.private_subnet_ids
 
   allowed_security_group_ids = concat(
-    [aws_security_group.seeder_lambda.id],
+    [for s in aws_security_group.seeder_lambda : s.id],
     [for b in module.bastion : b.security_group_id],
     [for v in module.client_vpn : v.security_group_id],
   )
   allowed_cidr_blocks = var.enable_databricks_peering ? [var.databricks_vpc_cidr] : []
 
-  db_engine           = var.db_engine
-  db_engine_version   = local.db_engine_version
-  db_instance_class   = var.db_instance_class
-  db_name             = var.db_name
-  db_username         = var.db_username
-  db_storage_gb       = var.db_storage_gb
-  skip_final_snapshot = var.skip_final_snapshot
-  deletion_protection = var.db_deletion_protection
+  db_engine             = var.db_engine
+  db_engine_version     = local.db_engine_version
+  db_instance_class     = var.db_instance_class
+  db_name               = var.db_name
+  db_username           = var.db_username
+  db_storage_gb         = var.db_storage_gb
+  snapshot_identifier   = var.snapshot_identifier
+  skip_final_snapshot   = var.skip_final_snapshot
+  deletion_protection   = var.db_deletion_protection
 }
 
 # ── Seeder ────────────────────────────────────────────────────────────────────
 
 module "seeder" {
+  count  = var.enable_seeder ? 1 : 0
   source = "./modules/seeder"
 
   name_prefix       = var.name_prefix
   subnet_ids        = module.vpc.private_subnet_ids
-  security_group_id = aws_security_group.seeder_lambda.id
+  security_group_id = aws_security_group.seeder_lambda[0].id
   aws_region        = var.aws_region
 
   db_engine      = var.db_engine
@@ -172,7 +175,8 @@ module "seeder" {
   db_secret_arn  = module.rds.db_secret_arn
   db_instance_id = module.rds.db_instance_id
 
-  row_count = var.row_count
+  row_count        = var.row_count
+  invoke_on_apply  = var.seed_on_apply && var.snapshot_identifier == null
 }
 
 # ── Databricks VPC peering (optional) ────────────────────────────────────────

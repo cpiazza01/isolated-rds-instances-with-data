@@ -95,6 +95,24 @@ variable "db_storage_gb" {
   default     = 20
 }
 
+variable "snapshot_identifier" {
+  description = "ARN or identifier of an RDS snapshot to restore from. When set, the instance is created from the snapshot instead of fresh. db_name and db_username are inherited from the snapshot."
+  type        = string
+  default     = null
+}
+
+variable "enable_seeder" {
+  description = "Deploy and invoke the seeder Lambda. Set false to skip seeding entirely (e.g. when loading data manually or restoring from a snapshot)."
+  type        = bool
+  default     = true
+}
+
+variable "seed_on_apply" {
+  description = "Automatically invoke the seeder Lambda on every apply. Set false to deploy the Lambda without running it — useful when you want manual control over when seeding happens."
+  type        = bool
+  default     = true
+}
+
 # When true, `terraform destroy` skips creating a final DB snapshot before
 # deleting the instance — safe for ephemeral dev/test stacks where you don't
 # need a recovery point. Always set to false for production-like environments.
