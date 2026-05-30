@@ -1,5 +1,5 @@
 # Client VPN module unit tests. Each run block uses `module { source = "..." }`
-# to target modules/client_vpn directly so assertions run against that module's
+# to target ./modules/client_vpn directly so assertions run against that module's
 # plan without going through the root module.
 #
 # Run: terraform test -filter=tests/client_vpn.tftest.hcl
@@ -23,7 +23,7 @@ run "byo_certs_no_tls_resources_generated" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -54,7 +54,7 @@ run "auto_certs_generates_ca_and_server" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -87,7 +87,7 @@ run "client_names_controls_cert_count" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -112,7 +112,7 @@ run "one_association_per_subnet" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -134,7 +134,7 @@ run "split_tunnel_enabled_by_default" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -155,7 +155,7 @@ run "logging_disabled_creates_no_log_group" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -175,7 +175,7 @@ run "logging_enabled_creates_log_group" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
@@ -202,7 +202,7 @@ run "name_prefix_applied_to_resources" {
   command = plan
 
   module {
-    source = "modules/client_vpn"
+    source = "./modules/client_vpn"
   }
 
   variables {
