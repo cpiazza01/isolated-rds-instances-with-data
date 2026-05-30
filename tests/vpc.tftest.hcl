@@ -10,7 +10,7 @@ run "private_subnets_always_created" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {
@@ -28,7 +28,7 @@ run "private_subnets_scale_with_az_count" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {
@@ -48,7 +48,7 @@ run "no_igw_or_public_subnets_by_default" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {
@@ -78,7 +78,7 @@ run "igw_created_when_public_subnets_enabled" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {
@@ -97,7 +97,7 @@ run "public_subnets_match_az_count" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {
@@ -116,7 +116,7 @@ run "public_subnets_use_high_cidr_indices" {
   command = plan
 
   module {
-    source = "../modules/vpc"
+    source = "modules/vpc"
   }
 
   variables {

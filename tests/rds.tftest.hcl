@@ -17,7 +17,7 @@ run "postgres_16_parameter_group_family" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -43,7 +43,7 @@ run "postgres_14_parameter_group_family" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -69,7 +69,7 @@ run "mysql_8_parameter_group_family" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -97,7 +97,7 @@ run "postgres_security_group_uses_port_5432" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -128,7 +128,7 @@ run "mysql_security_group_uses_port_3306" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -161,7 +161,7 @@ run "no_cidr_ingress_when_allowed_cidr_blocks_empty" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
@@ -187,7 +187,7 @@ run "cidr_ingress_added_when_cidr_blocks_provided" {
   command = plan
 
   module {
-    source = "../modules/rds"
+    source = "modules/rds"
   }
 
   variables {
