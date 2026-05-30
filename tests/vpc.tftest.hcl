@@ -16,6 +16,7 @@ run "private_subnets_always_created" {
   variables {
     name_prefix        = "test"
     availability_zones = ["us-east-1a", "us-east-1b"]
+    region             = "us-east-1"
   }
 
   assert {
@@ -34,6 +35,7 @@ run "private_subnets_scale_with_az_count" {
   variables {
     name_prefix        = "test"
     availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+    region             = "us-east-1"
   }
 
   assert {
@@ -54,6 +56,7 @@ run "no_igw_or_public_subnets_by_default" {
   variables {
     name_prefix        = "test"
     availability_zones = ["us-east-1a", "us-east-1b"]
+    region             = "us-east-1"
   }
 
   assert {
@@ -85,6 +88,7 @@ run "igw_created_when_public_subnets_enabled" {
     name_prefix           = "test"
     availability_zones    = ["us-east-1a", "us-east-1b"]
     enable_public_subnets = true
+    region                = "us-east-1"
   }
 
   assert {
@@ -104,6 +108,7 @@ run "public_subnets_match_az_count" {
     name_prefix           = "test"
     availability_zones    = ["us-east-1a", "us-east-1b"]
     enable_public_subnets = true
+    region                = "us-east-1"
   }
 
   assert {
@@ -124,6 +129,7 @@ run "public_subnets_use_high_cidr_indices" {
     availability_zones    = ["us-east-1a", "us-east-1b"]
     vpc_cidr              = "10.0.0.0/16"
     enable_public_subnets = true
+    region                = "us-east-1"
   }
 
   assert {

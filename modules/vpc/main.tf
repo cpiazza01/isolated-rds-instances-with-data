@@ -120,8 +120,6 @@ resource "aws_route_table_association" "public" {
 # inside the VPC, so no code changes are needed in the Lambda — boto3 just
 # works with its default endpoint URL.
 
-data "aws_region" "current" {}
-
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.name_prefix}-endpoints-"
   vpc_id      = aws_vpc.main.id
@@ -142,7 +140,7 @@ resource "aws_security_group" "vpc_endpoints" {
 
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${data.aws_region.current.id}.secretsmanager"
+  service_name        = "com.amazonaws.${var.region}.secretsmanager"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]

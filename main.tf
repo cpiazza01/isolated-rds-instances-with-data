@@ -21,6 +21,7 @@ module "vpc" {
   vpc_cidr              = var.vpc_cidr
   availability_zones    = var.availability_zones
   enable_public_subnets = var.enable_bastion
+  region                = var.aws_region
 }
 
 # ── Seeder Lambda security group ──────────────────────────────────────────────

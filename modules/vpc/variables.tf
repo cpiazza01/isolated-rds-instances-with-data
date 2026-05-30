@@ -19,3 +19,8 @@ variable "enable_public_subnets" {
   type    = bool
   default = false
 }
+
+variable "region" {
+  description = "AWS region used to construct the Secrets Manager VPC endpoint service name."
+  type        = string
+}
