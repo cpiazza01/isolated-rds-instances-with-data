@@ -1,0 +1,9 @@
+[tool.bumpversion]
+current_version = "0.1.0"
+# Committing and tagging are handled explicitly by the release workflow so
+# that the version bump and CHANGELOG update land in a single commit.
+commit = false
+tag    = false
+
+[[tool.bumpversion.files]]
+filename = "VERSION"

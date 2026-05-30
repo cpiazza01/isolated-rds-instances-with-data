@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_part:
+        description: "Version part to bump (patch / minor / major)"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history is required so git-cliff can walk all commits and
+          # `git describe` can find the previous tag for the "new commits" check.
+          fetch-depth: 0
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.9"
+
+      # bump-my-version reads .bumpversion.toml and rewrites the VERSION file.
+      - name: Install versioning tool
+        run: pip install bump-my-version
+
+      # Verify formatting and configuration are still valid before cutting a
+      # release. This is a lightweight safety net — the full CI job runs on
+      # every PR, so failures here indicate something was merged without CI.
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate
+
+      # Decides whether this push warrants a new release.
+      #
+      # Automatic (push) mode: only releases if there is at least one commit
+      # with a "feat:", "fix:", or "refactor:" prefix since the last tag.
+      # Chore, docs, and CI-only changes do not trigger a release automatically
+      # — use workflow_dispatch if you need to release those.
+      #
+      # Manual (workflow_dispatch) mode: always releases regardless of commit types.
+      - name: Check whether a release is needed
+        id: check
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -n "$LAST_TAG" ]; then
+            COUNT=$(git log ${LAST_TAG}..HEAD --oneline | wc -l)
+            if [ "$COUNT" -eq 0 ]; then
+              echo "No commits since $LAST_TAG — skipping."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            RELEASABLE=$(git log ${LAST_TAG}..HEAD --format="%s" | grep -cE "^(feat|fix|refactor):" || true)
+            if [ "$RELEASABLE" -eq 0 ]; then
+              echo "No releasable commits (feat/fix/refactor) — skipping automatic release."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Configure git
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Rewrites the VERSION file in place. --no-commit and --no-tag leave the
+      # committing and tagging to the explicit step below, which also bundles
+      # in the updated CHANGELOG.md so both land in a single commit.
+      - name: Bump version
+        id: bump
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          PART="${{ inputs.version_part || 'patch' }}"
+          bump-my-version bump "$PART" --no-commit --no-tag
+          echo "new_version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+
+      # Generates a markdown summary of unreleased commits for the GitHub
+      # Release body. Written to a temp file so it doesn't pollute the tree.
+      - name: Generate release notes
+        if: steps.check.outputs.skip != 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag v${{ steps.bump.outputs.new_version }} --strip all
+        env:
+          OUTPUT: /tmp/release_notes.md
+
+      # Regenerates the full CHANGELOG.md from the entire commit history so
+      # it stays in sync with every release, not just the latest one.
+      - name: Update CHANGELOG.md
+        if: steps.check.outputs.skip != 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag v${{ steps.bump.outputs.new_version }}
+        env:
+          OUTPUT: CHANGELOG.md
+
+      # Bundles the version bump and changelog update into one commit, then
+      # creates the annotated tag. [skip ci] prevents this push from
+      # triggering another release run.
+      - name: Commit, tag, and push
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git add VERSION CHANGELOG.md
+          git commit -m "chore: release v${{ steps.bump.outputs.new_version }} [skip ci]"
+          git tag "v${{ steps.bump.outputs.new_version }}"
+          git push
+          git push origin "v${{ steps.bump.outputs.new_version }}"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.bump.outputs.new_version }}" \
+            --title "v${{ steps.bump.outputs.new_version }}" \
+            --notes-file /tmp/release_notes.md

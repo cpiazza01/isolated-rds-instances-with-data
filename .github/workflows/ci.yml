@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── Terraform validate + unit tests ────────────────────────────────────────
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          # Must be >= 1.9 for current best practices. The ~> constraint keeps
+          # CI on the latest 1.x without jumping to a future major version.
+          terraform_version: "~> 1.9"
+
+      # Fails immediately if any .tf file is not canonically formatted.
+      # Run `terraform fmt -recursive` locally to fix.
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      # Downloads provider plugins. -backend=false skips remote state
+      # initialisation which is not needed for validation or tests.
+      - name: terraform init
+        run: terraform init -backend=false
+
+      # Validates syntax, references, and types across all modules without
+      # making any AWS API calls.
+      - name: terraform validate
+        run: terraform validate
+
+      # Runs all .tftest.hcl files found in tests/ and modules/*/tests/.
+      # All providers are mocked — no AWS credentials required.
+      # A single failing assertion fails this job.
+      - name: terraform test
+        run: terraform test
+
+  # ── tflint static analysis ─────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      # Downloads the AWS ruleset declared in .tflint.hcl.
+      - name: tflint init
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Runs tflint across the root module and every subdirectory.
+      # --recursive also checks modules/vpc, modules/rds, modules/seeder,
+      # and modules/bastion.
+      - name: tflint
+        run: tflint --recursive

@@ -1,0 +1,46 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars to version control.
+
+# No password needed — RDS generates and stores it in Secrets Manager automatically.
+# Retrieve it after apply with:
+#   aws secretsmanager get-secret-value \
+#     --secret-id "$(terraform output -raw db_secret_arn)" \
+#     --query SecretString --output text | python -m json.tool
+
+# ── RDS safety (optional overrides) ──────────────────────────────────────────
+# db_deletion_protection = true   # prevent accidental terraform destroy; default false
+
+# ── Bastion (optional) ────────────────────────────────────────────────────────
+# Uncomment to enable SSH-tunnel access from your local machine.
+#
+# enable_bastion        = true
+# bastion_ssh_key_name  = "my-existing-key-pair"
+# bastion_allowed_cidrs = ["1.2.3.4/32"]   # your public IP: curl -s https://checkip.amazonaws.com
+
+# ── AWS Client VPN (optional) ────────────────────────────────────────────────
+# Uncomment to enable private-network access via the AWS VPN Client app.
+# Requires two ACM certificates — see CLAUDE.md for certificate generation steps.
+#
+# Cost: ~$0.10/hr per subnet association ($144/month with 2 AZs, even when idle).
+# Run `terraform destroy` on the module when not in use to avoid charges.
+#
+# Option A — auto-generate certs (dev/test). Private keys stored in Terraform state.
+# enable_client_vpn              = true
+# client_vpn_cidr                = "172.16.0.0/16"   # must not overlap with vpc_cidr
+# client_vpn_create_certificates = true
+# client_vpn_client_names        = ["alice", "bob"]  # one cert/key pair per entry; default ["client"]
+# client_vpn_enable_connection_logging = true         # writes connect/disconnect events to CloudWatch
+
+# Option B — bring your own ACM certs (production-grade, keys never touch state).
+# enable_client_vpn          = true
+# client_vpn_cidr            = "172.16.0.0/16"
+# client_vpn_server_cert_arn = "arn:aws:acm:us-east-1:123456789012:certificate/server-cert-id"
+# client_vpn_root_cert_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/ca-cert-id"
+
+# ── Databricks VPC peering (optional) ────────────────────────────────────────
+# Uncomment to peer with a Databricks customer-managed VPC.
+#
+# enable_databricks_peering      = true
+# databricks_vpc_id              = "vpc-0abc1234567890def"
+# databricks_vpc_cidr            = "10.1.0.0/16"
+# databricks_peering_auto_accept = false   # true only if Databricks VPC is in the same AWS account
