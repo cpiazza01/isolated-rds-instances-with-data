@@ -1,14 +1,17 @@
 variable "name_prefix" {
-  type = string
+  description = "Prefix applied to all resource names and tags."
+  type        = string
 }
 
 variable "vpc_cidr" {
-  type    = string
-  default = "10.0.0.0/16"
+  description = "CIDR block for the VPC. /16 is required to support public subnet CIDR indices starting at 100."
+  type        = string
+  default     = "10.0.0.0/16"
 }
 
 variable "availability_zones" {
-  type = list(string)
+  description = "List of availability zones to create subnets in. One private (and, if enabled, one public) subnet is created per AZ."
+  type        = list(string)
 }
 
 # When true, an internet gateway and one public /24 subnet per AZ are created.
@@ -16,8 +19,9 @@ variable "availability_zones" {
 # (e.g. 10.0.100.0/24, 10.0.101.0/24) to avoid overlapping with the private
 # subnets at indices 0, 1, etc.
 variable "enable_public_subnets" {
-  type    = bool
-  default = false
+  description = "When true, creates an internet gateway and one public /24 subnet per AZ. Required for the bastion host feature."
+  type        = bool
+  default     = false
 }
 
 variable "region" {

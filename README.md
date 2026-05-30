@@ -144,7 +144,7 @@ A working example lives in [examples/basic/](examples/basic/).
 | `bastion_ssh_key_name` | `string` | `null` | Existing EC2 key pair name — required when `enable_bastion = true` |
 | `bastion_allowed_cidrs` | `list(string)` | `[]` | CIDRs allowed to SSH to the bastion (e.g. `["1.2.3.4/32"]`) |
 | `enable_client_vpn` | `bool` | `false` | Deploy an AWS Client VPN endpoint for private-network access to RDS (~$0.10/hr per subnet when idle) |
-| `client_vpn_cidr` | `string` | `"172.16.0.0/16"` | CIDR for VPN client IPs — must not overlap with `vpc_cidr` |
+| `client_vpn_cidr` | `string` | `"172.16.0.0/22"` | CIDR for VPN client IPs — must not overlap with `vpc_cidr` |
 | `client_vpn_create_certificates` | `bool` | `false` | Auto-generate PKI certs via the `tls` provider — private keys stored in Terraform state |
 | `client_vpn_client_names` | `list(string)` | `["client"]` | One cert/key pair generated per name when `client_vpn_create_certificates = true` |
 | `client_vpn_server_cert_arn` | `string` | `null` | ACM server certificate ARN — required when `client_vpn_create_certificates = false` |

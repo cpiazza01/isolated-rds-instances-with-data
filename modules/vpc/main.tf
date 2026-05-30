@@ -94,6 +94,8 @@ resource "aws_route_table" "public" {
   tags = { Name = "${var.name_prefix}-public-rt" }
 }
 
+# Binds each public subnet to the public route table so traffic from instances
+# in those subnets follows the 0.0.0.0/0 → IGW route defined above.
 resource "aws_route_table_association" "public" {
   count = var.enable_public_subnets ? length(var.availability_zones) : 0
 
@@ -102,24 +104,10 @@ resource "aws_route_table_association" "public" {
 }
 
 # ── VPC endpoint — AWS Secrets Manager ───────────────────────────────────────
-# Because this VPC has no NAT gateway, Lambda functions inside it cannot reach
-# public AWS service endpoints by default. The seeder Lambda needs to call
-# secretsmanager:GetSecretValue to retrieve the RDS master password at runtime.
-#
-# Cost: Interface VPC endpoints are billed at ~$0.01/hr per AZ (~$7/month per
-# AZ, ~$14/month with two AZs) plus $0.01 per GB of data processed. This is
-# cheaper than a NAT Gateway and is always created — it is not optional because
-# the seeder Lambda cannot function without it in a fully private VPC.
-#
-# An interface VPC endpoint injects an ENI into each private subnet, giving
-# Lambda (and any other resource in the VPC) a private network path to the
-# Secrets Manager API without any traffic leaving the VPC boundary.
-#
-# private_dns_enabled = true means the standard regional endpoint hostname
-# (secretsmanager.<region>.amazonaws.com) resolves to the private ENI IP
-# inside the VPC, so no code changes are needed in the Lambda — boto3 just
-# works with its default endpoint URL.
 
+# Controls which traffic can reach the VPC endpoint ENIs. Only HTTPS (443) from
+# within the VPC is permitted — the seeder Lambda is the only caller, and it
+# always originates from inside the VPC CIDR.
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.name_prefix}-endpoints-"
   vpc_id      = aws_vpc.main.id
@@ -138,6 +126,15 @@ resource "aws_security_group" "vpc_endpoints" {
   lifecycle { create_before_destroy = true }
 }
 
+# Provides a private network path to the Secrets Manager API without a NAT
+# gateway. Because the VPC has no NAT gateway, the seeder Lambda would otherwise
+# have no route to the public secretsmanager endpoint. An Interface endpoint
+# injects an ENI into each private subnet; private_dns_enabled = true rewrites
+# the standard hostname (secretsmanager.<region>.amazonaws.com) to that ENI's
+# private IP, so boto3 works without any code changes.
+#
+# Cost: ~$0.01/hr per AZ (~$14/month with two AZs) plus $0.01/GB processed.
+# Always created — the seeder Lambda cannot function without it.
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.region}.secretsmanager"

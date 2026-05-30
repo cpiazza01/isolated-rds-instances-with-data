@@ -156,11 +156,12 @@ variable "enable_client_vpn" {
 }
 
 # Must not overlap with the VPC CIDR or any other CIDR reachable from the VPC.
-# "172.16.0.0/16" is a safe choice when the VPC uses the 10.0.0.0/8 range.
+# "172.16.0.0/22" is a safe choice when the VPC uses the 10.0.0.0/8 range.
+# /22 (~1,000 addresses) is the smallest AWS allows and fits this tool's scale.
 variable "client_vpn_cidr" {
   description = "CIDR block for VPN client IPs. Must not overlap with vpc_cidr. Required when enable_client_vpn = true."
   type        = string
-  default     = "172.16.0.0/16"
+  default     = "172.16.0.0/22"
 }
 
 # When true, the client_vpn module generates a CA, server cert, and client cert

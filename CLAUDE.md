@@ -22,7 +22,7 @@ Two certificate paths are available:
 **Option A — auto-generated certs (dev/test only):** Terraform generates the full PKI and imports it into ACM. One certificate/key pair is created per entry in `client_vpn_client_names` — remove a name and re-apply to revoke that user. **Private keys are stored in Terraform state**, so restrict state access accordingly.
 ```hcl
 enable_client_vpn              = true
-client_vpn_cidr                = "172.16.0.0/16"   # must not overlap vpc_cidr
+client_vpn_cidr                = "172.16.0.0/22"   # must not overlap vpc_cidr
 client_vpn_create_certificates = true
 client_vpn_client_names        = ["alice", "bob"]  # one cert/key pair per entry
 ```
@@ -30,7 +30,7 @@ client_vpn_client_names        = ["alice", "bob"]  # one cert/key pair per entry
 **Option B — BYO certs (production-grade):** Generate certs with EasyRSA, import them into ACM, then pass the ARNs. Private keys never touch Terraform state.
 ```hcl
 enable_client_vpn          = true
-client_vpn_cidr            = "172.16.0.0/16"
+client_vpn_cidr            = "172.16.0.0/22"
 client_vpn_server_cert_arn = "arn:aws:acm:us-east-1:123456789012:certificate/server"
 client_vpn_root_cert_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/ca"
 ```

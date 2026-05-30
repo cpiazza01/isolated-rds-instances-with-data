@@ -22,9 +22,8 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-# Must not overlap with the VPC CIDR or any other reachable CIDR. A /16
-# (65,534 addresses) is typical; AWS assigns addresses from this pool to
-# connecting clients.
+# Must not overlap with the VPC CIDR or any other reachable CIDR. AWS allows
+# /12–/22; /22 (~1,000 addresses) is sufficient for small-team dev access.
 variable "client_cidr_block" {
   description = "CIDR block for VPN client IP addresses. Must not overlap with var.vpc_cidr."
   type        = string

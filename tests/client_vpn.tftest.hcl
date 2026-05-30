@@ -14,7 +14,7 @@ variables {
   vpc_id            = "vpc-0123456789abcdef0"
   vpc_cidr          = "10.0.0.0/16"
   subnet_ids        = ["subnet-0000000000000001", "subnet-0000000000000002"]
-  client_cidr_block = "172.16.0.0/16"
+  client_cidr_block = "172.16.0.0/22"
 }
 
 # ── BYO certificates ──────────────────────────────────────────────────────────
