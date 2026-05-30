@@ -7,7 +7,28 @@
 #     --secret-id "$(terraform output -raw db_secret_arn)" \
 #     --query SecretString --output text | python -m json.tool
 
+# ── Core (optional overrides) ─────────────────────────────────────────────────
+# name_prefix        = "myapp"
+# aws_region         = "us-east-1"
+# db_engine          = "postgres"         # "postgres" or "mysql"
+# db_engine_version  = "16.3"             # omit to use module default
+# db_instance_class  = "db.t3.micro"
+# db_name            = "appdb"
+# db_username        = "dbadmin"
+# db_storage_gb      = 20
+# row_count          = 1000               # rows seeded into the users table (1–1,000,000)
+
+# ── Seeder control ────────────────────────────────────────────────────────────
+# enable_seeder  = false   # skip the seeder Lambda entirely (no Lambda, no SG)
+# seed_on_apply  = false   # deploy the Lambda but don't auto-invoke on apply
+
+# ── Loading real data ─────────────────────────────────────────────────────────
+# snapshot_identifier = "arn:aws:rds:us-east-1:123456789012:snapshot:my-snapshot"
+# When set: instance is restored from snapshot; seeder Lambda is deployed but not
+# auto-invoked so your restored data is preserved.
+
 # ── RDS safety (optional overrides) ──────────────────────────────────────────
+# skip_final_snapshot    = false  # create a final snapshot on destroy; default true
 # db_deletion_protection = true   # prevent accidental terraform destroy; default false
 
 # ── Bastion (optional) ────────────────────────────────────────────────────────

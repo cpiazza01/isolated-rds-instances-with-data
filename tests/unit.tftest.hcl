@@ -6,9 +6,7 @@
 # Verbose output:  terraform test -verbose
 
 mock_provider "aws" {}
-mock_provider "null" {}
 mock_provider "archive" {}
-mock_provider "random" {}
 mock_provider "tls" {}
 
 # ── Variable validation ───────────────────────────────────────────────────────
@@ -191,7 +189,65 @@ run "name_prefix_applied_to_seeder_sg" {
   }
 
   assert {
-    condition     = aws_security_group.seeder_lambda.tags.Name == "myapp-seeder-sg"
+    condition     = aws_security_group.seeder_lambda[0].tags.Name == "myapp-seeder-sg"
     error_message = "Seeder SG Name tag should incorporate the name_prefix"
+  }
+}
+
+# ── availability_zones validation ─────────────────────────────────────────────
+
+run "single_az_is_rejected" {
+  command = plan
+
+  variables {
+    availability_zones = ["us-east-1a"]
+  }
+
+  expect_failures = [var.availability_zones]
+}
+
+# ── Seeder feature flags ───────────────────────────────────────────────────────
+
+run "seeder_disabled_creates_no_module_or_sg" {
+  command = plan
+
+  variables {
+    enable_seeder = false
+  }
+
+  assert {
+    condition     = length(module.seeder) == 0
+    error_message = "Seeder module should not be instantiated when enable_seeder = false"
+  }
+
+  assert {
+    condition     = length(aws_security_group.seeder_lambda) == 0
+    error_message = "Seeder SG should not be created when enable_seeder = false"
+  }
+}
+
+run "seed_on_apply_false_still_deploys_seeder" {
+  command = plan
+
+  variables {
+    seed_on_apply = false
+  }
+
+  assert {
+    condition     = length(module.seeder) == 1
+    error_message = "Seeder module should still be deployed when seed_on_apply = false — only auto-invocation is suppressed"
+  }
+}
+
+run "snapshot_identifier_still_deploys_seeder" {
+  command = plan
+
+  variables {
+    snapshot_identifier = "arn:aws:rds:us-east-1:123456789012:snapshot:my-snapshot"
+  }
+
+  assert {
+    condition     = length(module.seeder) == 1
+    error_message = "Seeder module should still be deployed when snapshot_identifier is set — only auto-invocation is suppressed"
   }
 }

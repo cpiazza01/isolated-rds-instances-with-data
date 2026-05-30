@@ -40,15 +40,24 @@ def build(module_dir: str) -> None:
             shutil.rmtree(item_path)
 
     print("Installing Lambda dependencies...")
-    subprocess.check_call(
-        [
-            sys.executable, "-m", "pip", "install",
-            "-r", requirements,
-            "-t", package_dir,
-            "--quiet",
-            "--no-cache-dir",
-        ]
-    )
+    try:
+        subprocess.check_call(
+            [
+                sys.executable, "-m", "pip", "install",
+                "-r", requirements,
+                "-t", package_dir,
+                "--quiet",
+                "--no-cache-dir",
+            ]
+        )
+    except subprocess.CalledProcessError as e:
+        print(
+            f"ERROR: pip install failed (exit code {e.returncode}).\n"
+            f"Check that pip is available and that all packages in {requirements} "
+            f"can be installed on this platform.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     shutil.copy(seed_py, package_dir)
     print(f"Lambda package ready: {package_dir}")

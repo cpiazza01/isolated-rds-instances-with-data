@@ -50,6 +50,14 @@ output "db_port" {
   value       = module.rds.db_port
 }
 
+# Surfaced so CLI commands in docs (e.g. aws lambda invoke, aws secretsmanager
+# get-secret-value) can reference the region via `terraform output` rather than
+# requiring the user to remember or hard-code it.
+output "aws_region" {
+  description = "AWS region this stack is deployed into."
+  value       = var.aws_region
+}
+
 # The seeder Lambda name is useful for re-running the seed step manually
 # without re-applying the whole stack:
 #   aws lambda invoke --function-name <name> response.json

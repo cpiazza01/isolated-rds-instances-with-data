@@ -151,8 +151,8 @@ terraform destroy                 # tears down everything
 
 # Re-seed without a full apply (uses the seeder Lambda already deployed)
 aws lambda invoke \
-  --function-name <name_prefix>-seeder \
-  --region <aws_region> \
+  --function-name "$(terraform output -raw seeder_lambda_name)" \
+  --region "$(terraform output -raw aws_region)" \
   response.json && cat response.json
 
 # Retrieve the RDS master password from Secrets Manager
@@ -198,7 +198,7 @@ tflint --recursive  # lint root + all modules
 
 ### Five-module design with a root-level dependency break
 
-The root `main.tf` wires five child modules — `vpc`, `rds`, `seeder` (always deployed) and `bastion`, `client_vpn` (conditional on feature flags) — but **also creates one resource directly**: `aws_security_group.seeder_lambda`. This is intentional and load-bearing.
+The root `main.tf` wires five child modules — `vpc`, `rds` (always deployed), `seeder` (conditional on `enable_seeder`), `bastion`, `client_vpn` (conditional on feature flags) — but **also creates one resource directly**: `aws_security_group.seeder_lambda` (when `enable_seeder = true`). This is intentional and load-bearing.
 
 There is a circular dependency between `rds` and `seeder`:
 - `modules/rds` needs the seeder Lambda's SG ID to write its ingress rule before RDS exists.
@@ -233,7 +233,7 @@ After the Lambda is deployed, `terraform_data.invoke_seeder` runs `aws lambda in
 
 ### Release pipeline
 
-Commits must follow [Conventional Commits](https://www.conventionalcommits.org/). The release workflow (`feat:`, `fix:`, `refactor:` prefixes) auto-releases on push to `main`; `chore:` and `docs:` do not. `bump-my-version` rewrites the `VERSION` file; `git-cliff` regenerates `CHANGELOG.md` from commit history using `cliff.toml`. Both land in a single `chore: release vX.Y.Z [skip ci]` commit.
+Commits must follow [Conventional Commits](https://www.conventionalcommits.org/). The release workflow (`feat:`, `fix:`, `refactor:`, `perf:` prefixes) auto-releases on push to `main`; `chore:` and `docs:` do not. `bump-my-version` rewrites the `VERSION` file; `git-cliff` regenerates `CHANGELOG.md` from commit history using `cliff.toml`. Both land in a single `chore: release vX.Y.Z [skip ci]` commit.
 
 ### Bastion host
 

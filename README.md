@@ -20,7 +20,8 @@ or integration-test fixtures without any manual SQL work.
 | RDS instance | PostgreSQL or MySQL, encrypted gp3 storage, not publicly accessible |
 | DB subnet group | Registers the private subnets with RDS |
 | DB parameter group | Dedicated config group so future tuning stays in Terraform |
-| 3× security groups (always) | RDS, seeder Lambda, VPC endpoints |
+| 2× security groups (always) | RDS, VPC endpoints |
+| *(conditional)* Seeder Lambda security group | Created when `enable_seeder = true` (the default) |
 | *(optional)* Bastion security group | Created when `enable_bastion = true` |
 | *(optional)* Client VPN security group | Created when `enable_client_vpn = true` |
 | IAM role + policy | Lambda execution role; VPC access + scoped Secrets Manager read |
@@ -56,7 +57,7 @@ or integration-test fixtures without any manual SQL work.
 │    ┌──────────────────▼──────────────────────┐          │
 │    │         RDS instance                    │          │
 │    │         postgres or mysql               │          │
-│    │         SG: ingress from Lambda SG only │          │
+│    │         SG: ingress from allowed SGs/CIDRs │        │
 │    └─────────────────────────────────────────┘          │
 └─────────────────────────────────────────────────────────┘
 
@@ -116,6 +117,7 @@ Terraform and never appears in the state file. To retrieve it after apply:
 ```bash
 aws secretsmanager get-secret-value \
   --secret-id "$(terraform output -raw db_secret_arn)" \
+  --region    "$(terraform output -raw aws_region)" \
   --query SecretString --output text | jq .
 ```
 
@@ -165,6 +167,7 @@ A working example lives in [examples/basic/](examples/basic/).
 
 | Name | Description |
 |---|---|
+| `aws_region` | AWS region the stack is deployed into |
 | `vpc_id` | ID of the private VPC |
 | `private_subnet_ids` | List of private subnet IDs |
 | `db_instance_id` | RDS instance identifier |
@@ -205,7 +208,7 @@ CREATE TABLE users (
 CREATE TABLE users (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(100) NOT NULL,
-    email      VARCHAR(200) NOT NULL,
+    email      VARCHAR(200) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -228,24 +231,23 @@ individual transactions fast.
 
 ## How re-seeding works
 
-The `invoke_seeder` null_resource re-runs whenever any of its trigger values
-change. This means the Lambda is automatically re-invoked (and rows re-inserted)
-if you:
+The `invoke_seeder` terraform_data resource re-runs whenever any of its trigger
+values change. This means the Lambda is automatically re-invoked if you:
 
 - Change `row_count`
 - Replace the RDS instance (e.g. change `db_engine` or `db_instance_class`)
 - Modify `seed.py` or `requirements.txt`
 
-The Lambda uses `CREATE TABLE IF NOT EXISTS`, so re-running on an existing
-table adds rows on top of any already present. If you need a clean slate,
-destroy and re-apply, or manually truncate the table first.
+The Lambda runs `CREATE TABLE IF NOT EXISTS` followed by `TRUNCATE`, so every
+seed run produces a clean, exact dataset with precisely the requested number of
+rows. Existing data is always replaced, not appended.
 
 You can also invoke the seeder manually at any time without a full apply:
 
 ```bash
 aws lambda invoke \
-  --function-name <seeder_lambda_name> \
-  --region us-east-1 \
+  --function-name "$(terraform output -raw seeder_lambda_name)" \
+  --region "$(terraform output -raw aws_region)" \
   response.json && cat response.json
 ```
 
@@ -265,6 +267,34 @@ imported by the Lambda handler are all derived from `db_engine` automatically.
 
 **Note:** changing `db_engine` after initial apply replaces the RDS instance
 (a destructive change). Terraform will warn you before proceeding.
+
+---
+
+## Controlling the seeder
+
+Three variables control seeder behaviour independently:
+
+| `enable_seeder` | `seed_on_apply` | `snapshot_identifier` | Lambda deployed | Auto-invoked on apply |
+|---|---|---|---|---|
+| `true` | `true` | `null` | ✓ | ✓ default |
+| `true` | `false` | `null` | ✓ | ✗ manual only |
+| `true` | `true` | set | ✓ | ✗ snapshot takes precedence |
+| `false` | — | — | ✗ | ✗ |
+
+**Skip seeding entirely** (no Lambda, no IAM role, no SG):
+```hcl
+enable_seeder = false
+```
+
+**Deploy the Lambda but invoke manually** (useful when you control timing of seed runs):
+```hcl
+seed_on_apply = false
+```
+Invoke manually at any time:
+```bash
+aws lambda invoke --function-name $(terraform output -raw seeder_lambda_name) \
+  --region <aws_region> response.json && cat response.json
+```
 
 ---
 
@@ -318,6 +348,12 @@ pg_dump -h <source-host> -U <source-user> -d <source-db> | \
 ├── variables.tf                   # All input variables with descriptions
 ├── outputs.tf                     # Useful post-apply values
 ├── versions.tf                    # Provider version pins
+│
+├── examples/
+│   └── basic/
+│       ├── main.tf                # Minimal working example
+│       ├── versions.tf            # Provider declarations for the example
+│       └── terraform.tfvars.example
 │
 └── modules/
     ├── vpc/
@@ -397,8 +433,8 @@ tools aren't present.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Every PR and push to `main` | `terraform fmt -check -recursive` + `terraform validate` |
-| `release.yml` | Push to `main` or manual dispatch | Bumps version, updates `CHANGELOG.md`, creates a GitHub Release |
+| `ci.yml` | Every PR and push to `main` | `terraform fmt -check -recursive` + `terraform validate` + `terraform test` + `tflint` |
+| `release.yml` | After CI passes on `main`, or manual dispatch | Bumps version, updates `CHANGELOG.md`, creates a GitHub Release |
 | `claude-code-review.yml` | PR opened / updated | Posts an automated Claude code review as a PR comment |
 | `claude.yml` | `@claude` in any issue or PR comment | Lets Claude respond to questions and requests in-repo |
 
@@ -406,7 +442,7 @@ tools aren't present.
 
 Releases are driven by [Conventional Commits](https://www.conventionalcommits.org/).
 
-**Automatic** — push to `main` with at least one `feat:`, `fix:`, or `refactor:` commit since the last tag:
+**Automatic** — push to `main` with at least one `feat:`, `fix:`, `refactor:`, or `perf:` commit since the last tag:
 ```
 git commit -m "feat: add support for db.t4g instance classes"
 git push origin main   # release workflow fires automatically
@@ -445,6 +481,7 @@ The workflow:
 
 ## Limitations
 
+- **Seeder is optional:** Set `enable_seeder = false` to deploy RDS without the seeder Lambda. Combine with `snapshot_identifier` to restore from an existing snapshot, or use `enable_bastion`/`enable_client_vpn` to load data manually via `pg_dump`/`mysqldump`.
 - **Lambda timeout:** AWS Lambda has a hard maximum of 15 minutes. At 500
   rows per batch, roughly 500,000 rows can be inserted before the timeout is
   reached. For larger datasets, consider running the seeder Lambda multiple

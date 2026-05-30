@@ -29,5 +29,5 @@ output "rds_security_group_id" {
 # and never surfaces in Terraform state.
 output "db_secret_arn" {
   description = "ARN of the Secrets Manager secret containing the RDS master password. Retrieve with: aws secretsmanager get-secret-value --secret-id <arn>"
-  value       = aws_db_instance.main.master_user_secret[0].secret_arn
+  value       = try(aws_db_instance.main.master_user_secret[0].secret_arn, null)
 }

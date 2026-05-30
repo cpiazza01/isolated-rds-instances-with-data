@@ -22,6 +22,11 @@ variable "availability_zones" {
   description = "At least two AZs — required for the RDS subnet group."
   type        = list(string)
   default     = ["us-east-1a", "us-east-1b"]
+
+  validation {
+    condition     = length(var.availability_zones) >= 2
+    error_message = "At least two availability zones are required for the RDS subnet group."
+  }
 }
 
 # The IP address range for the VPC. The module carves /24 subnets out of this

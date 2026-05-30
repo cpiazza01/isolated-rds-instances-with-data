@@ -28,13 +28,18 @@ resource "aws_security_group" "rds" {
 
   # Ingress from specific security groups (seeder Lambda, bastion). SG-based
   # rules are preferred over CIDR rules for resources inside the same VPC
-  # because they stay correct even if subnet CIDRs change.
-  ingress {
-    from_port       = local.port
-    to_port         = local.port
-    protocol        = "tcp"
-    security_groups = var.allowed_security_group_ids
-    description     = "DB port from allowed SGs"
+  # because they stay correct even if subnet CIDRs change. The dynamic block
+  # is omitted when the list is empty (e.g. enable_seeder=false, no bastion,
+  # no VPN) to avoid an AWS API error from a rule with no source.
+  dynamic "ingress" {
+    for_each = length(var.allowed_security_group_ids) > 0 ? [1] : []
+    content {
+      from_port       = local.port
+      to_port         = local.port
+      protocol        = "tcp"
+      security_groups = var.allowed_security_group_ids
+      description     = "DB port from allowed SGs"
+    }
   }
 
   # Ingress from CIDR blocks — used for peered VPCs (e.g. Databricks) where

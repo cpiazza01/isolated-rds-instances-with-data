@@ -175,8 +175,8 @@ module "seeder" {
   db_secret_arn  = module.rds.db_secret_arn
   db_instance_id = module.rds.db_instance_id
 
-  row_count        = var.row_count
-  invoke_on_apply  = var.seed_on_apply && var.snapshot_identifier == null
+  row_count       = var.row_count
+  invoke_on_apply = var.seed_on_apply && var.snapshot_identifier == null
 }
 
 # ── Databricks VPC peering (optional) ────────────────────────────────────────

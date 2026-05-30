@@ -16,8 +16,15 @@ import sys
 
 def main() -> None:
     path = sys.argv[1]
-    with open(path) as f:
-        response = json.load(f)
+    try:
+        with open(path) as f:
+            response = json.load(f)
+    except FileNotFoundError:
+        print(f"ERROR: Response file not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Could not parse Lambda response JSON from {path}: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if response.get("FunctionError"):
         print(

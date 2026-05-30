@@ -101,16 +101,17 @@ run "postgres_security_group_uses_port_5432" {
   }
 
   variables {
-    name_prefix         = "test"
-    vpc_id              = "vpc-mock00000000"
-    subnet_ids          = ["subnet-mock0001", "subnet-mock0002"]
-    db_engine           = "postgres"
-    db_engine_version   = "16.3"
-    db_instance_class   = "db.t3.micro"
-    db_name             = "testdb"
-    db_username         = "testadmin"
-    db_storage_gb       = 20
-    skip_final_snapshot = true
+    name_prefix                = "test"
+    vpc_id                     = "vpc-mock00000000"
+    subnet_ids                 = ["subnet-mock0001", "subnet-mock0002"]
+    allowed_security_group_ids = ["sg-mock00000000000001"]
+    db_engine                  = "postgres"
+    db_engine_version          = "16.3"
+    db_instance_class          = "db.t3.micro"
+    db_name                    = "testdb"
+    db_username                = "testadmin"
+    db_storage_gb              = 20
+    skip_final_snapshot        = true
   }
 
   assert {
@@ -132,16 +133,17 @@ run "mysql_security_group_uses_port_3306" {
   }
 
   variables {
-    name_prefix         = "test"
-    vpc_id              = "vpc-mock00000000"
-    subnet_ids          = ["subnet-mock0001", "subnet-mock0002"]
-    db_engine           = "mysql"
-    db_engine_version   = "8.0.35"
-    db_instance_class   = "db.t3.micro"
-    db_name             = "testdb"
-    db_username         = "testadmin"
-    db_storage_gb       = 20
-    skip_final_snapshot = true
+    name_prefix                = "test"
+    vpc_id                     = "vpc-mock00000000"
+    subnet_ids                 = ["subnet-mock0001", "subnet-mock0002"]
+    allowed_security_group_ids = ["sg-mock00000000000001"]
+    db_engine                  = "mysql"
+    db_engine_version          = "8.0.35"
+    db_instance_class          = "db.t3.micro"
+    db_name                    = "testdb"
+    db_username                = "testadmin"
+    db_storage_gb              = 20
+    skip_final_snapshot        = true
   }
 
   assert {
@@ -165,16 +167,17 @@ run "no_cidr_ingress_when_allowed_cidr_blocks_empty" {
   }
 
   variables {
-    name_prefix         = "test"
-    vpc_id              = "vpc-mock00000000"
-    subnet_ids          = ["subnet-mock0001", "subnet-mock0002"]
-    db_engine           = "postgres"
-    db_engine_version   = "16.3"
-    db_instance_class   = "db.t3.micro"
-    db_name             = "testdb"
-    db_username         = "testadmin"
-    db_storage_gb       = 20
-    skip_final_snapshot = true
+    name_prefix                = "test"
+    vpc_id                     = "vpc-mock00000000"
+    subnet_ids                 = ["subnet-mock0001", "subnet-mock0002"]
+    allowed_security_group_ids = ["sg-mock00000000000001"]
+    db_engine                  = "postgres"
+    db_engine_version          = "16.3"
+    db_instance_class          = "db.t3.micro"
+    db_name                    = "testdb"
+    db_username                = "testadmin"
+    db_storage_gb              = 20
+    skip_final_snapshot        = true
   }
 
   assert {
@@ -191,17 +194,18 @@ run "cidr_ingress_added_when_cidr_blocks_provided" {
   }
 
   variables {
-    name_prefix         = "test"
-    vpc_id              = "vpc-mock00000000"
-    subnet_ids          = ["subnet-mock0001", "subnet-mock0002"]
-    db_engine           = "postgres"
-    db_engine_version   = "16.3"
-    db_instance_class   = "db.t3.micro"
-    db_name             = "testdb"
-    db_username         = "testadmin"
-    db_storage_gb       = 20
-    skip_final_snapshot = true
-    allowed_cidr_blocks = ["10.1.0.0/16"]
+    name_prefix                = "test"
+    vpc_id                     = "vpc-mock00000000"
+    subnet_ids                 = ["subnet-mock0001", "subnet-mock0002"]
+    allowed_security_group_ids = ["sg-mock00000000000001"]
+    db_engine                  = "postgres"
+    db_engine_version          = "16.3"
+    db_instance_class          = "db.t3.micro"
+    db_name                    = "testdb"
+    db_username                = "testadmin"
+    db_storage_gb              = 20
+    skip_final_snapshot        = true
+    allowed_cidr_blocks        = ["10.1.0.0/16"]
   }
 
   assert {
