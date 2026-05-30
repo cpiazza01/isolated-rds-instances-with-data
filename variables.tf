@@ -135,14 +135,9 @@ variable "bastion_ssh_key_name" {
 # Restrict SSH access to known IPs. Use ["x.x.x.x/32"] for a single address.
 # Check your public IP with: curl -s https://checkip.amazonaws.com
 variable "bastion_allowed_cidrs" {
-  description = "CIDRs permitted to SSH to the bastion (e.g. [\"1.2.3.4/32\"])."
+  description = "CIDRs permitted to SSH to the bastion (e.g. [\"1.2.3.4/32\"]). Required when enable_bastion = true."
   type        = list(string)
   default     = []
-
-  validation {
-    condition     = !var.enable_bastion || length(var.bastion_allowed_cidrs) > 0
-    error_message = "bastion_allowed_cidrs must contain at least one CIDR when enable_bastion = true. Check your public IP with: curl -s https://checkip.amazonaws.com"
-  }
 }
 
 # ── AWS Client VPN ────────────────────────────────────────────────────────────

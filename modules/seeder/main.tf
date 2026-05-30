@@ -8,26 +8,20 @@ locals {
 
 # ── IAM ───────────────────────────────────────────────────────────────────────
 
-# Generates the trust policy document that allows the Lambda service to assume
-# the execution role. This is separate from permissions — it only controls
-# who is allowed to call sts:AssumeRole on the role, not what the role can do.
-data "aws_iam_policy_document" "lambda_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
 # The IAM execution role that the Lambda function runs as. All AWS API calls
 # made by the function are authorised against this role's attached policies.
 # Using name_prefix instead of name lets AWS append a unique suffix, which
 # prevents conflicts if the module is destroyed and reapplied quickly.
 resource "aws_iam_role" "lambda" {
-  name_prefix        = "${var.name_prefix}-seeder-"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  name_prefix = "${var.name_prefix}-seeder-"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
 }
 
 # Attaches the AWS-managed VPC access policy to the execution role. This

@@ -68,6 +68,20 @@ resource "aws_security_group" "seeder_lambda" {
 #
 # Stop the instance when not in use to minimise cost:
 #   aws ec2 stop-instances --instance-ids $(terraform output -raw bastion_instance_id)
+# Guard: bastion_allowed_cidrs must be non-empty when the bastion is enabled.
+# Cross-variable references are not allowed in variable validation blocks, so
+# this precondition lives here instead.
+resource "terraform_data" "bastion_cidr_check" {
+  count = var.enable_bastion ? 1 : 0
+
+  lifecycle {
+    precondition {
+      condition     = length(var.bastion_allowed_cidrs) > 0
+      error_message = "bastion_allowed_cidrs must contain at least one CIDR when enable_bastion = true. Check your public IP with: curl -s https://checkip.amazonaws.com"
+    }
+  }
+}
+
 module "bastion" {
   count  = var.enable_bastion ? 1 : 0
   source = "./modules/bastion"

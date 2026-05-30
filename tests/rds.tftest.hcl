@@ -114,12 +114,12 @@ run "postgres_security_group_uses_port_5432" {
   }
 
   assert {
-    condition     = aws_security_group.rds.ingress[0].from_port == 5432
+    condition     = one(aws_security_group.rds.ingress).from_port == 5432
     error_message = "RDS SG ingress from_port should be 5432 for PostgreSQL"
   }
 
   assert {
-    condition     = aws_security_group.rds.ingress[0].to_port == 5432
+    condition     = one(aws_security_group.rds.ingress).to_port == 5432
     error_message = "RDS SG ingress to_port should be 5432 for PostgreSQL"
   }
 }
@@ -145,12 +145,12 @@ run "mysql_security_group_uses_port_3306" {
   }
 
   assert {
-    condition     = aws_security_group.rds.ingress[0].from_port == 3306
+    condition     = one(aws_security_group.rds.ingress).from_port == 3306
     error_message = "RDS SG ingress from_port should be 3306 for MySQL"
   }
 
   assert {
-    condition     = aws_security_group.rds.ingress[0].to_port == 3306
+    condition     = one(aws_security_group.rds.ingress).to_port == 3306
     error_message = "RDS SG ingress to_port should be 3306 for MySQL"
   }
 }
