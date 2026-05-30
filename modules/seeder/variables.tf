@@ -3,11 +3,6 @@ variable "name_prefix" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC in which the Lambda function's ENIs are placed."
-  type        = string
-}
-
 variable "subnet_ids" {
   description = "Private subnet IDs for the Lambda VPC config. The function places an ENI in each subnet."
   type        = list(string)

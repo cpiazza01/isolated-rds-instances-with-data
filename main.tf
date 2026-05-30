@@ -159,7 +159,6 @@ module "seeder" {
   source = "./modules/seeder"
 
   name_prefix       = var.name_prefix
-  vpc_id            = module.vpc.vpc_id
   subnet_ids        = module.vpc.private_subnet_ids
   security_group_id = aws_security_group.seeder_lambda.id
   aws_region        = var.aws_region
