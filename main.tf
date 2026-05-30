@@ -145,15 +145,15 @@ module "rds" {
   )
   allowed_cidr_blocks = var.enable_databricks_peering ? [var.databricks_vpc_cidr] : []
 
-  db_engine             = var.db_engine
-  db_engine_version     = local.db_engine_version
-  db_instance_class     = var.db_instance_class
-  db_name               = var.db_name
-  db_username           = var.db_username
-  db_storage_gb         = var.db_storage_gb
-  snapshot_identifier   = var.snapshot_identifier
-  skip_final_snapshot   = var.skip_final_snapshot
-  deletion_protection   = var.db_deletion_protection
+  db_engine           = var.db_engine
+  db_engine_version   = local.db_engine_version
+  db_instance_class   = var.db_instance_class
+  db_name             = var.db_name
+  db_username         = var.db_username
+  db_storage_gb       = var.db_storage_gb
+  snapshot_identifier = var.snapshot_identifier
+  skip_final_snapshot = var.skip_final_snapshot
+  deletion_protection = var.db_deletion_protection
 }
 
 # ── Seeder ────────────────────────────────────────────────────────────────────
