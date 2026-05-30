@@ -11,7 +11,7 @@ locals {
   #   mysql    8.0.35 → "mysql8.0"
   pg_family = var.db_engine == "postgres" ? (
     "postgres${split(".", var.db_engine_version)[0]}"
-  ) : (
+    ) : (
     "mysql${join(".", slice(split(".", var.db_engine_version), 0, 2))}"
   )
 }

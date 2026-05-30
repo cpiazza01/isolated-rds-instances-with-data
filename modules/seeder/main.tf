@@ -132,13 +132,13 @@ resource "aws_lambda_function" "seeder" {
   # updating these values.
   environment {
     variables = {
-      DB_ENGINE = var.db_engine
-      DB_HOST   = var.db_host
-      DB_PORT   = tostring(var.db_port)
-      DB_NAME   = var.db_name
-      DB_USER      = var.db_username
+      DB_ENGINE     = var.db_engine
+      DB_HOST       = var.db_host
+      DB_PORT       = tostring(var.db_port)
+      DB_NAME       = var.db_name
+      DB_USER       = var.db_username
       DB_SECRET_ARN = var.db_secret_arn
-      ROW_COUNT    = tostring(var.row_count)
+      ROW_COUNT     = tostring(var.row_count)
     }
   }
 

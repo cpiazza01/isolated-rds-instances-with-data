@@ -93,11 +93,11 @@ module "client_vpn" {
   count  = var.enable_client_vpn ? 1 : 0
   source = "./modules/client_vpn"
 
-  name_prefix            = var.name_prefix
-  vpc_id                 = module.vpc.vpc_id
-  vpc_cidr               = var.vpc_cidr
-  subnet_ids             = module.vpc.private_subnet_ids
-  client_cidr_block      = var.client_vpn_cidr
+  name_prefix               = var.name_prefix
+  vpc_id                    = module.vpc.vpc_id
+  vpc_cidr                  = var.vpc_cidr
+  subnet_ids                = module.vpc.private_subnet_ids
+  client_cidr_block         = var.client_vpn_cidr
   create_certificates       = var.client_vpn_create_certificates
   client_names              = var.client_vpn_client_names
   server_certificate_arn    = var.client_vpn_server_cert_arn
