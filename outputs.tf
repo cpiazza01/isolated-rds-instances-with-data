@@ -102,35 +102,28 @@ output "bastion_ssh_tunnel_command" {
 # bastion (the public IP changes on each start).
 output "bastion_connection_guide" {
   description = "Full step-by-step connection guide for reaching RDS via the bastion tunnel (null when enable_bastion = false)."
-  value = one([
-    for b in module.bastion :
-    <<-GUIDE
-    ── Connecting to RDS via bastion ──────────────────────────────────────────
-
-    Step 1 — Retrieve the database password:
-      aws secretsmanager get-secret-value \
-        --secret-id ${module.rds.db_secret_arn} \
-        --region ${var.aws_region} \
-        --query SecretString --output text | jq -r .password
-
-    Step 2 — Open the SSH tunnel (keep this terminal open):
-      ssh -N \
-        -i /path/to/your-key.pem \
-        -L ${module.rds.db_port}:${module.rds.db_host}:${module.rds.db_port} \
-        ec2-user@${b.public_ip}
-
-    Step 3 — Connect your DB client in a new terminal:
-    %{if var.db_engine == "postgres"~}
-      psql -h localhost -p ${module.rds.db_port} -U ${var.db_username} -d ${var.db_name}
-    %{else~}
-      mysql -h 127.0.0.1 -P ${module.rds.db_port} -u ${var.db_username} -p ${var.db_name}
-    %{endif~}
-
-    Step 4 — Stop the bastion when done to avoid charges (~$0.005/hr running):
-      aws ec2 stop-instances \
-        --instance-ids ${b.instance_id} \
-        --region ${var.aws_region}
-    GUIDE
+  value = length(module.bastion) == 0 ? null : join("\n", [
+    "── Connecting to RDS via bastion ──────────────────────────────────────────",
+    "",
+    "Step 1 — Retrieve the database password:",
+    "  aws secretsmanager get-secret-value \\",
+    "    --secret-id ${module.rds.db_secret_arn} \\",
+    "    --region ${var.aws_region} \\",
+    "    --query SecretString --output text | jq -r .password",
+    "",
+    "Step 2 — Open the SSH tunnel (keep this terminal open):",
+    "  ssh -N \\",
+    "    -i /path/to/your-key.pem \\",
+    "    -L ${module.rds.db_port}:${module.rds.db_host}:${module.rds.db_port} \\",
+    "    ec2-user@${module.bastion[0].public_ip}",
+    "",
+    "Step 3 — Connect your DB client in a new terminal:",
+    var.db_engine == "postgres" ? "  psql -h localhost -p ${module.rds.db_port} -U ${var.db_username} -d ${var.db_name}" : "  mysql -h 127.0.0.1 -P ${module.rds.db_port} -u ${var.db_username} -p ${var.db_name}",
+    "",
+    "Step 4 — Stop the bastion when done to avoid charges (~$0.005/hr running):",
+    "  aws ec2 stop-instances \\",
+    "    --instance-ids ${module.bastion[0].instance_id} \\",
+    "    --region ${var.aws_region}",
   ])
 }
 
