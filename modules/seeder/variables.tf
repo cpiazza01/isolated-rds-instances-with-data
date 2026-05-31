@@ -63,3 +63,9 @@ variable "invoke_on_apply" {
   type        = bool
   default     = true
 }
+
+variable "lambda_permission_boundary_arn" {
+  description = "ARN of an IAM permissions boundary to attach to the seeder Lambda execution role. Required in accounts where IAM role creation is restricted to roles with a specific boundary."
+  type        = string
+  default     = null
+}

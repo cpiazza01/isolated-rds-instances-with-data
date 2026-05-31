@@ -100,6 +100,12 @@ variable "db_storage_gb" {
   default     = 20
 }
 
+variable "lambda_permission_boundary_arn" {
+  description = "ARN of an IAM permissions boundary to attach to the seeder Lambda execution role. Required in accounts where IAM role creation is restricted to roles with a specific boundary."
+  type        = string
+  default     = null
+}
+
 variable "snapshot_identifier" {
   description = "ARN or identifier of an RDS snapshot to restore from. When set, the instance is created from the snapshot instead of fresh. db_name and db_username are inherited from the snapshot."
   type        = string

@@ -73,7 +73,7 @@ resource "aws_security_group" "seeder_lambda" {
 # Guard: bastion_allowed_cidrs must be non-empty when the bastion is enabled.
 # Cross-variable references are not allowed in variable validation blocks, so
 # this precondition lives here instead.
-resource "terraform_data" "bastion_cidr_check" {
+resource "null_resource" "bastion_cidr_check" {
   count = var.enable_bastion ? 1 : 0
 
   lifecycle {
@@ -175,8 +175,9 @@ module "seeder" {
   db_secret_arn  = module.rds.db_secret_arn
   db_instance_id = module.rds.db_instance_id
 
-  row_count       = var.row_count
-  invoke_on_apply = var.seed_on_apply && var.snapshot_identifier == null
+  row_count                      = var.row_count
+  invoke_on_apply                = var.seed_on_apply && var.snapshot_identifier == null
+  lambda_permission_boundary_arn = var.lambda_permission_boundary_arn
 }
 
 # ── Databricks VPC peering (optional) ────────────────────────────────────────

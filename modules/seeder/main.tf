@@ -18,7 +18,8 @@ locals {
 # Using name_prefix instead of name lets AWS append a unique suffix, which
 # prevents conflicts if the module is destroyed and reapplied quickly.
 resource "aws_iam_role" "lambda" {
-  name_prefix = "${var.name_prefix}-seeder-"
+  name_prefix          = "${var.name_prefix}-seeder-"
+  permissions_boundary = var.lambda_permission_boundary_arn
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

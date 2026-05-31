@@ -139,6 +139,7 @@ A working example lives in [examples/basic/](examples/basic/).
 | `db_name` | `string` | `"appdb"` | Database name created on the instance |
 | `db_username` | `string` | `"dbadmin"` | Master username |
 | `db_storage_gb` | `number` | `20` | Allocated storage in GiB (gp3, cannot be shrunk after creation) |
+| `lambda_permission_boundary_arn` | `string` | `null` | ARN of an IAM permissions boundary for the seeder Lambda execution role — required in accounts that enforce a boundary on all IAM role creation |
 | `enable_seeder` | `bool` | `true` | Deploy and invoke the seeder Lambda — set `false` to skip seeding entirely (e.g. when loading data manually or restoring from a snapshot) |
 | `seed_on_apply` | `bool` | `true` | Auto-invoke the seeder on every apply — set `false` to deploy the Lambda without running it automatically (manual control over when seeding happens) |
 | `snapshot_identifier` | `string` | `null` | RDS snapshot ARN or identifier to restore from — when set, `db_name` and `db_username` are inherited from the snapshot and the seeder Lambda is deployed but not auto-invoked |
