@@ -155,6 +155,52 @@ output "client_vpn_config_cmd" {
   ])
 }
 
+# Step-by-step connection guide for the Client VPN workflow.
+# Re-run `terraform output client_vpn_connection_guide` at any time to
+# retrieve the full set of commands with all values filled in.
+output "client_vpn_connection_guide" {
+  description = "Full step-by-step connection guide for reaching RDS via Client VPN (null when enable_client_vpn = false)."
+  value = one([
+    for v in module.client_vpn :
+    <<-GUIDE
+    ── Connecting to RDS via Client VPN ───────────────────────────────────────
+
+    Step 1 — Download the base VPN config file:
+      aws ec2 export-client-vpn-client-configuration --client-vpn-endpoint-id ${v.endpoint_id} --region ${var.aws_region} --output text > client-config.ovpn
+
+    Step 2 — Append your certificate and key to client-config.ovpn:
+    %{if var.client_vpn_create_certificates~}
+    %{for name, secret_name in v.client_ovpn_secret_names~}
+      For ${name}:
+      aws secretsmanager get-secret-value --secret-id ${secret_name} --region ${var.aws_region} --query SecretString --output text >> client-config.ovpn
+
+    %{endfor~}
+    %{else~}
+      Embed from your EasyRSA files:
+      printf "<cert>\n%s\n</cert>\n" "$(cat pki/issued/client1.crt)" >> client-config.ovpn
+      printf "<key>\n%s\n</key>\n"   "$(cat pki/private/client1.key)" >> client-config.ovpn
+    %{endif~}
+
+    Step 3 — Import client-config.ovpn into the AWS VPN Client app and connect:
+      Download: https://aws.amazon.com/vpn/client-vpn-download/
+      File > Manage Profiles > Add Profile > select client-config.ovpn
+
+    Step 4 — Retrieve the database password (once connected):
+      aws secretsmanager get-secret-value \
+        --secret-id ${module.rds.db_secret_arn} \
+        --region ${var.aws_region} \
+        --query SecretString --output text | jq -r .password
+
+    Step 5 — Connect your DB client directly (no tunnel needed):
+    %{if var.db_engine == "postgres"~}
+      psql -h ${module.rds.db_host} -p ${module.rds.db_port} -U ${var.db_username} -d ${var.db_name}
+    %{else~}
+      mysql -h ${module.rds.db_host} -P ${module.rds.db_port} -u ${var.db_username} -p ${var.db_name}
+    %{endif~}
+    GUIDE
+  ])
+}
+
 # Maps of client name → PEM, one entry per name in client_vpn_client_names.
 # Both are null when enable_client_vpn = false, and empty maps when
 # client_vpn_create_certificates = false. See CLAUDE.md for embedding steps.

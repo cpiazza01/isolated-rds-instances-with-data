@@ -142,6 +142,28 @@ resource "aws_acm_certificate" "ca" {
   tags = { Name = "${var.name_prefix}-vpn-ca-cert" }
 }
 
+# ── Client credential secrets ────────────────────────────────────────────────
+
+# Stores each client's cert + key as a single Secrets Manager secret so users
+# can append it to their .ovpn file with one AWS CLI call — no jq or terraform
+# access needed. The SecretString is the exact text to append to client-config.ovpn.
+# Only created when create_certificates = true; BYO-cert users manage their own
+# key material outside Terraform.
+resource "aws_secretsmanager_secret" "client_ovpn" {
+  for_each    = toset(var.create_certificates ? var.client_names : [])
+  name        = "${var.name_prefix}-vpn-${each.key}-ovpn"
+  description = "Client VPN cert and key for ${each.key}. Append SecretString directly to client-config.ovpn."
+  tags        = { Name = "${var.name_prefix}-vpn-${each.key}-ovpn" }
+}
+
+# Stores the actual cert and key PEM values. Written as a separate resource so
+# Terraform can update the value independently of the secret metadata.
+resource "aws_secretsmanager_secret_version" "client_ovpn" {
+  for_each  = toset(var.create_certificates ? var.client_names : [])
+  secret_id = aws_secretsmanager_secret.client_ovpn[each.key].id
+  secret_string = "<cert>\n${tls_locally_signed_cert.client[each.key].cert_pem}</cert>\n<key>\n${tls_private_key.client[each.key].private_key_pem}</key>\n"
+}
+
 # ── Connection logging (optional) ────────────────────────────────────────────
 
 # Created only when enable_connection_logging = true. Stores one log stream per

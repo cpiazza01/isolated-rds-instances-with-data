@@ -42,3 +42,11 @@ output "client_private_key_pem" {
   sensitive   = true
   value       = { for name, key in tls_private_key.client : name => key.private_key_pem }
 }
+
+# Map of client name → Secrets Manager secret name. Each secret contains the
+# cert+key block ready to append to client-config.ovpn. Empty when
+# create_certificates = false.
+output "client_ovpn_secret_names" {
+  description = "Map of client name to Secrets Manager secret name containing the .ovpn cert+key append block (empty when create_certificates = false)."
+  value       = { for name, s in aws_secretsmanager_secret.client_ovpn : name => s.name }
+}
