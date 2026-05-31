@@ -177,6 +177,7 @@ A working example lives in [examples/basic/](examples/basic/).
 | `db_port` | RDS port (5432 or 3306) |
 | `seeder_lambda_name` | Name of the seeder Lambda function |
 | `db_secret_arn` | ARN of the Secrets Manager secret holding the RDS master password |
+| `db_password_command` | Ready-to-run CLI command to retrieve the RDS master password |
 | `vpc_cidr` | VPC CIDR block — needed as the return-route destination for Databricks peering |
 | `bastion_public_ip` | Public IP of the bastion host (`null` when `enable_bastion = false`) |
 | `bastion_instance_id` | EC2 instance ID — use to start/stop the bastion from the CLI |

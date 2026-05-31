@@ -92,7 +92,7 @@ output "bastion_ssh_tunnel_command" {
   description = "Ready-to-use SSH tunnel command (null when enable_bastion = false). Run this, then connect your DB client to localhost:<db_port>."
   value = one([
     for b in module.bastion :
-    "ssh -N -L ${module.rds.db_port}:${module.rds.db_host}:${module.rds.db_port} ec2-user@${b.public_ip}"
+    "ssh -N -L ${module.rds.db_port}:${module.rds.db_host}:${module.rds.db_port} ec2-user@${b.public_ip} -i <local path to your matching SSH key>"
   ])
 }
 
@@ -154,10 +154,13 @@ output "databricks_peering_id" {
 }
 
 # The ARN of the Secrets Manager secret holding the RDS master password.
-# Useful for granting other applications read access to the same credential,
-# or for inspecting the password manually:
-#   aws secretsmanager get-secret-value --secret-id <arn> --query SecretString
 output "db_secret_arn" {
   description = "ARN of the Secrets Manager secret containing the RDS master password."
   value       = module.rds.db_secret_arn
+}
+
+# Ready-to-run command to retrieve the RDS master password from Secrets Manager.
+output "db_password_command" {
+  description = "Ready-to-run AWS CLI command to retrieve the RDS master password from Secrets Manager."
+  value       = "aws secretsmanager get-secret-value --secret-id ${module.rds.db_secret_arn} --region ${var.aws_region} --query SecretString --output text | jq -r .password"
 }
