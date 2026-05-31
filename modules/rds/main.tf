@@ -24,7 +24,7 @@ locals {
 resource "aws_security_group" "rds" {
   name_prefix = "${var.name_prefix}-rds-"
   vpc_id      = var.vpc_id
-  description = "RDS — ingress from allowed SGs (seeder Lambda, bastion) and CIDRs (peered VPCs)"
+  description = "RDS - ingress from allowed SGs (seeder Lambda, bastion) and CIDRs (peered VPCs)"
 
   # Ingress from specific security groups (seeder Lambda, bastion). SG-based
   # rules are preferred over CIDR rules for resources inside the same VPC

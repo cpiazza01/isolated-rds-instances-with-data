@@ -23,7 +23,7 @@ data "aws_ami" "amazon_linux" {
 resource "aws_security_group" "bastion" {
   name_prefix = "${var.name_prefix}-bastion-"
   vpc_id      = var.vpc_id
-  description = "Bastion — SSH inbound from allowed CIDRs only"
+  description = "Bastion - SSH inbound from allowed CIDRs only"
 
   ingress {
     from_port   = 22

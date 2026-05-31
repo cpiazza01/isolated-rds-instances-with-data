@@ -162,7 +162,7 @@ resource "aws_cloudwatch_log_group" "client_vpn" {
 resource "aws_security_group" "this" {
   name_prefix = "${var.name_prefix}-client-vpn-"
   vpc_id      = var.vpc_id
-  description = "AWS Client VPN endpoint — allows authenticated clients to reach VPC resources"
+  description = "AWS Client VPN endpoint - allows authenticated clients to reach VPC resources"
 
   egress {
     from_port   = 0

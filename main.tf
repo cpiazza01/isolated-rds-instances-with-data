@@ -33,7 +33,7 @@ resource "aws_security_group" "seeder_lambda" {
   count       = var.enable_seeder ? 1 : 0
   name_prefix = "${var.name_prefix}-seeder-"
   vpc_id      = module.vpc.vpc_id
-  description = "Seeder Lambda — restricted egress to RDS port and Secrets Manager endpoint"
+  description = "Seeder Lambda - restricted egress to RDS port and Secrets Manager endpoint"
 
   # The Lambda only ever needs two outbound paths:
   # 1. The DB port to reach the RDS instance.

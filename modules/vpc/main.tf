@@ -111,7 +111,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.name_prefix}-endpoints-"
   vpc_id      = aws_vpc.main.id
-  description = "VPC interface endpoints — HTTPS from within VPC only"
+  description = "VPC interface endpoints - HTTPS from within VPC only"
 
   ingress {
     from_port   = 443
