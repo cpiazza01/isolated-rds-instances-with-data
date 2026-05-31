@@ -61,15 +61,18 @@ resource "aws_iam_role_policy" "read_db_secret" {
 # ── Build Lambda package ──────────────────────────────────────────────────────
 
 # Runs scripts/build.py on the local machine whenever seed.py or
-# requirements.txt changes. The script pip-installs the Python DB drivers
+# requirements.txt changes (or when the package directory is empty, e.g. after
+# a fresh Terragrunt cache copy). pip-installs the Python DB drivers
 # (pg8000 / pymysql) and copies seed.py into lambda/package/, which is the
 # directory that archive_file.lambda_zip then zips up.
 #
-# terraform_data is a built-in resource (no null provider needed) that
-# replaces null_resource for local-exec provisioners. triggers_replace causes
-# replacement — and re-runs the provisioner — when any listed value changes.
-resource "terraform_data" "build_package" {
-  triggers_replace = [local.build_trigger]
+# Uses null_resource rather than terraform_data to avoid a known schema
+# availability issue with terraform.io/builtin/terraform in some Terragrunt
+# environments that prevents terraform_data provisioners from executing.
+resource "null_resource" "build_package" {
+  triggers = {
+    build_trigger = local.build_trigger
+  }
 
   provisioner "local-exec" {
     command = "python \"${path.module}/scripts/build.py\" \"${path.module}\""
@@ -78,11 +81,11 @@ resource "terraform_data" "build_package" {
 
 # Zips the contents of lambda/package/ into a single archive that can be
 # uploaded to Lambda. `depends_on` defers this data source to apply time
-# (Terraform 1.3+), ensuring it always runs *after* terraform_data.build_package
+# (Terraform 1.3+), ensuring it always runs *after* null_resource.build_package
 # has populated the package directory with the freshly installed dependencies.
 # The .gitkeep placeholder file is excluded so it doesn't appear in the package.
 data "archive_file" "lambda_zip" {
-  depends_on  = [terraform_data.build_package]
+  depends_on  = [null_resource.build_package]
   type        = "zip"
   source_dir  = "${path.module}/lambda/package"
   output_path = "${path.module}/lambda_package.zip"
@@ -160,16 +163,16 @@ resource "aws_lambda_function" "seeder" {
 #   • db_instance   : the RDS instance was replaced (new instance = fresh seed)
 #   • function_name : the Lambda itself was replaced
 #   • lambda_hash   : the handler code or its dependencies changed
-resource "terraform_data" "invoke_seeder" {
+resource "null_resource" "invoke_seeder" {
   count = var.invoke_on_apply ? 1 : 0
 
   # Re-runs when row count changes, RDS is replaced, or Lambda code changes.
-  triggers_replace = [
-    var.row_count,
-    var.db_instance_id,
-    aws_lambda_function.seeder.function_name,
-    data.archive_file.lambda_zip.output_base64sha256,
-  ]
+  triggers = {
+    row_count     = tostring(var.row_count)
+    db_instance   = var.db_instance_id
+    function_name = aws_lambda_function.seeder.function_name
+    lambda_hash   = data.archive_file.lambda_zip.output_base64sha256
+  }
 
   provisioner "local-exec" {
     # Invoke the Lambda synchronously, then validate the response with

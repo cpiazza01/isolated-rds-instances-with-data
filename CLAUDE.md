@@ -210,8 +210,8 @@ The break: the Lambda SG is created at the root level and its ID is passed as a 
 
 The seeder Lambda is built locally during `terraform apply` via two chained resources:
 
-1. `terraform_data.build_package` — fires when `seed.py` or `requirements.txt` changes (detected via MD5 trigger). Runs `scripts/build.py`, which pip-installs `pg8000` and `pymysql` into `lambda/package/` and copies `seed.py` there.
-2. `data.archive_file.lambda_zip` — zips `lambda/package/`. Has `depends_on = [terraform_data.build_package]`, which defers it to apply time (Terraform 1.3+ behaviour), guaranteeing the pip install runs first.
+1. `null_resource.build_package` — fires when `seed.py`, `requirements.txt`, or the built package is absent (detected via MD5 trigger). Runs `scripts/build.py`, which pip-installs `pg8000` and `pymysql` into `lambda/package/` and copies `seed.py` there. Uses `null_resource` rather than `terraform_data` to avoid a schema availability issue with `terraform.io/builtin/terraform` in Terragrunt environments.
+2. `data.archive_file.lambda_zip` — zips `lambda/package/`. Has `depends_on = [null_resource.build_package]`, which defers it to apply time (Terraform 1.3+ behaviour), guaranteeing the pip install runs first.
 
 The `lambda/package/` directory exists in the repo with a `.gitkeep` so `archive_file` doesn't error during the first plan before any build has run.
 
@@ -227,9 +227,9 @@ The Lambda runs inside a fully private VPC (no NAT gateway). Without a VPC endpo
 
 ### Seeder invocation
 
-After the Lambda is deployed, `terraform_data.invoke_seeder` runs `aws lambda invoke` synchronously via `local-exec`. The `aws` CLI must be on `PATH` and configured with credentials when running `terraform apply`. The response is written to `modules/seeder/invoke_response.json` (gitignored).
+After the Lambda is deployed, `null_resource.invoke_seeder` runs `aws lambda invoke` synchronously via `local-exec`. The `aws` CLI must be on `PATH` and configured with credentials when running `terraform apply`. The response is written to `modules/seeder/invoke_response.json` (gitignored).
 
-`terraform_data.invoke_seeder` re-runs (re-seeds) if any of its triggers change: `row_count`, `db_instance_id`, `function_name`, or the Lambda zip hash. Because `seed.py` uses `TRUNCATE` before inserting, re-runs produce a clean, exact dataset rather than appending rows.
+`null_resource.invoke_seeder` re-runs (re-seeds) if any of its triggers change: `row_count`, `db_instance_id`, `function_name`, or the Lambda zip hash. Because `seed.py` uses `TRUNCATE` before inserting, re-runs produce a clean, exact dataset rather than appending rows.
 
 ### Release pipeline
 

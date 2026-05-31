@@ -7,6 +7,7 @@
 
 mock_provider "aws" {}
 mock_provider "archive" {}
+mock_provider "null" {}
 mock_provider "tls" {}
 
 # ── Variable validation ───────────────────────────────────────────────────────

@@ -18,8 +18,14 @@ terraform {
       version = ">= 2.0"
     }
 
-    # terraform_data (built-in since 1.4) replaced null_resource for local-exec
-    # provisioners, so the null provider is no longer needed.
+    # Used by modules/seeder for the build_package and invoke_seeder resources.
+    # null_resource is preferred over terraform_data for local-exec provisioners
+    # due to a schema availability issue with terraform.io/builtin/terraform in
+    # some Terragrunt environments.
+    null = {
+      source  = "hashicorp/null"
+      version = ">= 3.0"
+    }
 
     # Used by modules/client_vpn to generate a CA, server cert, and client cert
     # when create_certificates = true. Private keys are stored in Terraform state.

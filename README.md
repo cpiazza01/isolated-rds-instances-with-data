@@ -26,7 +26,7 @@ or integration-test fixtures without any manual SQL work.
 | *(optional)* Client VPN security group | Created when `enable_client_vpn = true` |
 | IAM role + policy | Lambda execution role; VPC access + scoped Secrets Manager read |
 | Lambda function | Python 3.12; connects to RDS and inserts rows in batches of 500 |
-| 2× terraform_data resources | Build the Lambda package locally; invoke it after RDS is ready |
+| 2× null_resource resources | Build the Lambda package locally; invoke it after RDS is ready |
 | *(optional)* Internet gateway + public subnets | Created when `enable_bastion = true` |
 | *(optional)* Bastion EC2 (t3.nano) | SSH jump host for local-machine → RDS tunnelling |
 | *(optional)* Client VPN endpoint + network associations | Created when `enable_client_vpn = true`; lets clients connect directly to the private VPC |
@@ -63,9 +63,9 @@ or integration-test fixtures without any manual SQL work.
 
   Terraform apply (local machine)
     │
-    ├─ terraform_data: pip install → lambda/package/
+    ├─ null_resource:  pip install → lambda/package/
     ├─ archive_file:   zip lambda/package/ → lambda_package.zip
-    └─ terraform_data: aws lambda invoke  ──────────────────▶ Lambda runs
+    └─ null_resource:  aws lambda invoke  ───────────────────▶ Lambda runs
                                                               └─ INSERT x rows
 ```
 
@@ -231,7 +231,7 @@ individual transactions fast.
 
 ## How re-seeding works
 
-The `invoke_seeder` terraform_data resource re-runs whenever any of its trigger
+The `invoke_seeder` null_resource re-runs whenever any of its trigger
 values change. This means the Lambda is automatically re-invoked if you:
 
 - Change `row_count`
