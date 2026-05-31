@@ -1,13 +1,9 @@
-# Combined trigger for terraform_data.build_package. Changes when:
-#   • seed.py or requirements.txt are modified (normal development workflow)
-#   • lambda/package/seed.py is absent (e.g. fresh Terragrunt cache where built
-#     packages are not checked into git) — try() returns "package-missing" so
-#     the trigger differs from the stored state, forcing a rebuild.
 locals {
+  # Source-file hashes used by invoke_seeder to detect handler/dependency changes.
+  # Not used by build_package (which always runs — see below).
   build_trigger = join("-", [
     filemd5("${path.module}/lambda/seed.py"),
     filemd5("${path.module}/lambda/requirements.txt"),
-    try(filemd5("${path.module}/lambda/package/seed.py"), "package-missing"),
   ])
 }
 
@@ -61,18 +57,20 @@ resource "aws_iam_role_policy" "read_db_secret" {
 
 # ── Build Lambda package ──────────────────────────────────────────────────────
 
-# Runs scripts/build.py on the local machine whenever seed.py or
-# requirements.txt changes (or when the package directory is empty, e.g. after
-# a fresh Terragrunt cache copy). pip-installs the Python DB drivers
-# (pg8000 / pymysql) and copies seed.py into lambda/package/, which is the
-# directory that archive_file.lambda_zip then zips up.
+# Runs scripts/build.py before every apply to ensure lambda/package/ is
+# populated in the current working directory. Always-run is necessary because
+# module caching (e.g. Terragrunt) copies the module to a fresh directory that
+# never contains pip-installed packages, and trigger-based approaches fail when
+# the state records the same "missing" sentinel value across cache invalidations.
 #
-# Uses null_resource rather than terraform_data to avoid a known schema
-# availability issue with terraform.io/builtin/terraform in some Terragrunt
-# environments that prevents terraform_data provisioners from executing.
+# build.py is idempotent: it skips pip install when the packages are already
+# present, so repeated applies in the same directory complete in seconds.
+#
+# Uses null_resource rather than terraform_data to avoid a schema availability
+# issue with terraform.io/builtin/terraform in some Terragrunt environments.
 resource "null_resource" "build_package" {
   triggers = {
-    build_trigger = local.build_trigger
+    always_run = timestamp()
   }
 
   provisioner "local-exec" {

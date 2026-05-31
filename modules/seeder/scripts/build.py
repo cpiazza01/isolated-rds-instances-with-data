@@ -29,35 +29,45 @@ def build(module_dir: str) -> None:
     requirements = os.path.join(lambda_dir, "requirements.txt")
     seed_py      = os.path.join(lambda_dir, "seed.py")
 
-    # Clear existing package contents, keeping the .gitkeep placeholder.
-    for item in os.listdir(package_dir):
-        if item == ".gitkeep":
-            continue
-        item_path = os.path.join(package_dir, item)
-        if os.path.isfile(item_path) or os.path.islink(item_path):
-            os.remove(item_path)
-        elif os.path.isdir(item_path):
-            shutil.rmtree(item_path)
+    # Check whether pip packages are already installed. If present, skip the
+    # install step so repeated applies in the same directory complete in seconds.
+    # This matters when null_resource.build_package uses always_run = timestamp()
+    # to guarantee the build runs in every Terragrunt cache directory.
+    pg8000_present  = os.path.isdir(os.path.join(package_dir, "pg8000"))
+    pymysql_present = os.path.isdir(os.path.join(package_dir, "pymysql"))
 
-    print("Installing Lambda dependencies...")
-    try:
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "pip", "install",
-                "-r", requirements,
-                "-t", package_dir,
-                "--quiet",
-                "--no-cache-dir",
-            ]
-        )
-    except subprocess.CalledProcessError as e:
-        print(
-            f"ERROR: pip install failed (exit code {e.returncode}).\n"
-            f"Check that pip is available and that all packages in {requirements} "
-            f"can be installed on this platform.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    if pg8000_present and pymysql_present:
+        print("Dependencies already present, skipping pip install.")
+    else:
+        # Clear stale package contents before a fresh install, keeping .gitkeep.
+        for item in os.listdir(package_dir):
+            if item == ".gitkeep":
+                continue
+            item_path = os.path.join(package_dir, item)
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.remove(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+
+        print("Installing Lambda dependencies...")
+        try:
+            subprocess.check_call(
+                [
+                    sys.executable, "-m", "pip", "install",
+                    "-r", requirements,
+                    "-t", package_dir,
+                    "--quiet",
+                    "--no-cache-dir",
+                ]
+            )
+        except subprocess.CalledProcessError as e:
+            print(
+                f"ERROR: pip install failed (exit code {e.returncode}).\n"
+                f"Check that pip is available and that all packages in {requirements} "
+                f"can be installed on this platform.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     shutil.copy(seed_py, package_dir)
     print(f"Lambda package ready: {package_dir}")
