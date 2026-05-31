@@ -82,9 +82,50 @@ entirely within the VPC.
 - Terraform >= 1.9.0
 - Python 3.12 on the machine running `terraform apply` (used to build the
   Lambda package — the build script enforces this version to match the Lambda runtime)
-- AWS CLI configured with credentials that have permission to create the
-  resources listed above
+- AWS CLI configured with credentials that have the IAM permissions listed below
 - The `aws` CLI available on `PATH` (used to invoke the Lambda after deploy)
+
+---
+
+## Required IAM permissions
+
+The credentials running `terraform apply` need the following permissions. Optional features add their own requirements as noted.
+
+### Always required
+
+| Service | Actions needed |
+|---|---|
+| **EC2 / VPC** | `ec2:CreateVpc`, `ec2:DeleteVpc`, `ec2:DescribeVpcs`, `ec2:ModifyVpcAttribute`; `ec2:*Subnet*`; `ec2:*RouteTable*`; `ec2:*InternetGateway*`; `ec2:*SecurityGroup*`; `ec2:*VpcEndpoint*`; `ec2:DescribeAvailabilityZones` |
+| **RDS** | `rds:CreateDBInstance`, `rds:DeleteDBInstance`, `rds:ModifyDBInstance`, `rds:DescribeDBInstances`; `rds:*DBSubnetGroup*`; `rds:*DBParameterGroup*`; `rds:ListTagsForResource`, `rds:AddTagsToResource` |
+| **IAM** | `iam:CreateRole`, `iam:DeleteRole`, `iam:GetRole`, `iam:PassRole`; `iam:PutRolePolicy`, `iam:DeleteRolePolicy`, `iam:GetRolePolicy`; `iam:AttachRolePolicy`, `iam:DetachRolePolicy` |
+| **Lambda** | `lambda:CreateFunction`, `lambda:DeleteFunction`, `lambda:GetFunction`, `lambda:UpdateFunctionCode`, `lambda:UpdateFunctionConfiguration`, `lambda:InvokeFunction`, `lambda:AddPermission`, `lambda:RemovePermission`, `lambda:ListVersionsByFunction`, `lambda:GetPolicy` |
+| **Secrets Manager** | `secretsmanager:GetSecretValue`, `secretsmanager:DescribeSecret` (read the RDS-managed password at deploy time) |
+
+### When `enable_seeder = true` (default)
+
+No additional permissions beyond the above — the seeder Lambda and its IAM role are covered by the IAM and Lambda entries.
+
+> **Note for restricted accounts:** If your account requires a permissions boundary on all IAM roles, set `lambda_permission_boundary_arn` to the boundary ARN. The role will be created with that boundary attached.
+
+### When `enable_bastion = true`
+
+| Service | Actions needed |
+|---|---|
+| **EC2** | `ec2:RunInstances`, `ec2:TerminateInstances`, `ec2:DescribeInstances`, `ec2:DescribeImages`, `ec2:DescribeKeyPairs`; `ec2:*InternetGateway*`; `ec2:*Subnet*` (public subnets) |
+
+### When `enable_client_vpn = true`
+
+| Service | Actions needed |
+|---|---|
+| **EC2 / Client VPN** | `ec2:CreateClientVpnEndpoint`, `ec2:DeleteClientVpnEndpoint`, `ec2:DescribeClientVpnEndpoints`; `ec2:*ClientVpnRoute*`; `ec2:*ClientVpnTargetNetwork*`; `ec2:*ClientVpnAuthorizationRule*` |
+| **ACM** | `acm:ImportCertificate`, `acm:DeleteCertificate`, `acm:DescribeCertificate` (when `client_vpn_create_certificates = true`) |
+| **CloudWatch Logs** | `logs:CreateLogGroup`, `logs:DeleteLogGroup`, `logs:DescribeLogGroups` (when `client_vpn_enable_connection_logging = true`) |
+
+### When `enable_databricks_peering = true`
+
+| Service | Actions needed |
+|---|---|
+| **EC2** | `ec2:CreateVpcPeeringConnection`, `ec2:DeleteVpcPeeringConnection`, `ec2:DescribeVpcPeeringConnections`; `ec2:CreateRoute`, `ec2:DeleteRoute` |
 
 ---
 

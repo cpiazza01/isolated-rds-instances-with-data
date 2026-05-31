@@ -50,6 +50,9 @@ resource "tls_private_key" "server" {
 
 # The CSR carries the server's identity (common name) and public key to the CA
 # so the CA can sign it and produce the final server certificate.
+# dns_names adds a Subject Alternative Name matching the common name — AWS ACM
+# requires at least one SAN (domain) on the server certificate when it is used
+# with Client VPN, even for self-signed PKI.
 resource "tls_cert_request" "server" {
   count           = var.create_certificates ? 1 : 0
   private_key_pem = tls_private_key.server[0].private_key_pem
@@ -58,6 +61,8 @@ resource "tls_cert_request" "server" {
     common_name  = "${var.name_prefix}-vpn-server"
     organization = var.name_prefix
   }
+
+  dns_names = ["${var.name_prefix}-vpn-server"]
 }
 
 # The CA-signed server certificate is what the VPN endpoint presents to clients
