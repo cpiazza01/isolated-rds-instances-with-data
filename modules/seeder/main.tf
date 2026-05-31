@@ -1,9 +1,14 @@
-# A combined MD5 hash of both the handler source and the requirements file.
-# Used as the trigger value for terraform_data.build_package — when either
-# file changes, the hash changes, which causes Terraform to re-run the pip
-# install and produce a fresh Lambda deployment package.
+# Combined trigger for terraform_data.build_package. Changes when:
+#   • seed.py or requirements.txt are modified (normal development workflow)
+#   • lambda/package/seed.py is absent (e.g. fresh Terragrunt cache where built
+#     packages are not checked into git) — try() returns "package-missing" so
+#     the trigger differs from the stored state, forcing a rebuild.
 locals {
-  build_trigger = "${filemd5("${path.module}/lambda/seed.py")}-${filemd5("${path.module}/lambda/requirements.txt")}"
+  build_trigger = join("-", [
+    filemd5("${path.module}/lambda/seed.py"),
+    filemd5("${path.module}/lambda/requirements.txt"),
+    try(filemd5("${path.module}/lambda/package/seed.py"), "package-missing"),
+  ])
 }
 
 # ── IAM ───────────────────────────────────────────────────────────────────────
