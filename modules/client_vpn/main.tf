@@ -240,20 +240,6 @@ resource "aws_ec2_client_vpn_network_association" "this" {
   subnet_id              = var.subnet_ids[count.index]
 }
 
-# ── Route ─────────────────────────────────────────────────────────────────────
-
-# Adds a route to the VPN endpoint's routing table so connected clients know
-# to send VPC-bound traffic through the VPN tunnel. The first subnet's ENI is
-# the target — VPC networking handles forwarding from there to any private
-# subnet or resource within the VPC CIDR.
-resource "aws_ec2_client_vpn_route" "vpc" {
-  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.this.id
-  destination_cidr_block = var.vpc_cidr
-  target_vpc_subnet_id   = aws_ec2_client_vpn_network_association.this[0].subnet_id
-
-  depends_on = [aws_ec2_client_vpn_network_association.this]
-}
-
 # ── Authorization rule ────────────────────────────────────────────────────────
 
 # AWS Client VPN enforces a two-layer access model: authentication (is this a
