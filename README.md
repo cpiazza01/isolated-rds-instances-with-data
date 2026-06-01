@@ -84,6 +84,7 @@ entirely within the VPC.
   Lambda package — the build script enforces this version to match the Lambda runtime)
 - AWS CLI configured with credentials that have the IAM permissions listed below
 - The `aws` CLI available on `PATH` (used to invoke the Lambda after deploy)
+- `jq` available on `PATH` (used in the password-retrieval and connection guide commands — install via `brew install jq`, `apt install jq`, or [stedolan.github.io/jq](https://stedolan.github.io/jq/))
 
 ---
 
@@ -119,10 +120,10 @@ No additional permissions beyond the above — the seeder Lambda and its IAM rol
 |---|---|
 | **EC2 / Client VPN** | `ec2:CreateClientVpnEndpoint`, `ec2:DeleteClientVpnEndpoint`, `ec2:DescribeClientVpnEndpoints`; `ec2:*ClientVpnRoute*`; `ec2:*ClientVpnTargetNetwork*`; `ec2:*ClientVpnAuthorizationRule*` |
 | **ACM** | `acm:ImportCertificate`, `acm:DeleteCertificate`, `acm:DescribeCertificate` (when `client_vpn_create_certificates = true`) |
-| **Secrets Manager** | `secretsmanager:CreateSecret`, `secretsmanager:DeleteSecret`, `secretsmanager:PutSecretValue`, `secretsmanager:DescribeSecret` on `<name_prefix>-vpn-*` (when `client_vpn_create_certificates = true`) |
+| **Secrets Manager** | `secretsmanager:CreateSecret`, `secretsmanager:DeleteSecret`, `secretsmanager:PutSecretValue`, `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` on `<name_prefix>-vpn-*` (when `client_vpn_create_certificates = true`) |
 | **CloudWatch Logs** | `logs:CreateLogGroup`, `logs:DeleteLogGroup`, `logs:DescribeLogGroups` (when `client_vpn_enable_connection_logging = true`) |
 
-Users retrieving their `.ovpn` credentials also need `secretsmanager:GetSecretValue` on `<name_prefix>-vpn-*`.
+> **Note:** `secretsmanager:GetSecretValue` is required both by Terraform operators (the provider reads back the secret on every `terraform plan` to detect drift) and by users who retrieve their `.ovpn` credentials via the connection guide.
 
 ### When `enable_databricks_peering = true`
 
@@ -228,6 +229,7 @@ A working example lives in [examples/basic/](examples/basic/).
 | `bastion_ssh_tunnel_command` | Complete SSH tunnel command, ready to paste (`null` when `enable_bastion = false`) |
 | `client_vpn_endpoint_id` | Client VPN endpoint ID (`null` when `enable_client_vpn = false`) |
 | `client_vpn_connection_guide` | Full step-by-step connection guide for reaching RDS via Client VPN (`null` when `enable_client_vpn = false`) |
+| `client_vpn_client_ovpn_secret_names` | Map of client name → Secrets Manager secret name holding the `.ovpn` cert+key append block (`null` when `enable_client_vpn = false`; empty when `client_vpn_create_certificates = false`) |
 | `client_vpn_dns_name` | Client VPN endpoint DNS name (`null` when `enable_client_vpn = false`) |
 | `client_vpn_config_cmd` | Ready-to-run command to download the `.ovpn` client config (`null` when `enable_client_vpn = false`) |
 | `client_vpn_client_cert_pem` | *(sensitive)* Map of client name → certificate PEM (`null` when `enable_client_vpn = false`; empty when `client_vpn_create_certificates = false`) |

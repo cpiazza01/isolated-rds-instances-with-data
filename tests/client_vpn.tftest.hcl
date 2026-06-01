@@ -46,6 +46,16 @@ run "byo_certs_no_tls_resources_generated" {
     condition     = length(aws_acm_certificate.server) == 0
     error_message = "No ACM server cert should be imported when create_certificates = false"
   }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret.client_ovpn) == 0
+    error_message = "No Secrets Manager secrets should be created when create_certificates = false"
+  }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret_version.client_ovpn) == 0
+    error_message = "No Secrets Manager secret versions should be created when create_certificates = false"
+  }
 }
 
 # ── Auto-generated certificates ───────────────────────────────────────────────
@@ -81,6 +91,16 @@ run "auto_certs_generates_ca_and_server" {
     condition     = length(aws_acm_certificate.ca) == 1
     error_message = "One ACM CA cert should be imported when create_certificates = true"
   }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret.client_ovpn) == 1
+    error_message = "One Secrets Manager secret should be created per client when create_certificates = true"
+  }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret_version.client_ovpn) == 1
+    error_message = "One Secrets Manager secret version should be created per client when create_certificates = true"
+  }
 }
 
 run "client_names_controls_cert_count" {
@@ -103,6 +123,16 @@ run "client_names_controls_cert_count" {
   assert {
     condition     = length(tls_locally_signed_cert.client) == 3
     error_message = "One signed client cert should be generated per entry in client_names"
+  }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret.client_ovpn) == 3
+    error_message = "One Secrets Manager secret should be created per client name"
+  }
+
+  assert {
+    condition     = length(aws_secretsmanager_secret_version.client_ovpn) == 3
+    error_message = "One Secrets Manager secret version should be created per client name"
   }
 }
 

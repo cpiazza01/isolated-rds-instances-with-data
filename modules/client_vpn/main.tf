@@ -1,3 +1,9 @@
+locals {
+  # The set of client names to generate certs and secrets for. Empty when
+  # create_certificates = false so all for_each resources are skipped together.
+  cert_client_names = toset(var.create_certificates ? var.client_names : [])
+}
+
 # ── Certificate generation (optional) ────────────────────────────────────────
 #
 # When create_certificates = true, a full PKI is generated here using the tls
@@ -86,7 +92,7 @@ resource "tls_locally_signed_cert" "server" {
 # re-applying destroys only that user's key and cert, revoking their access
 # without touching any other client.
 resource "tls_private_key" "client" {
-  for_each  = toset(var.create_certificates ? var.client_names : [])
+  for_each  = local.cert_client_names
   algorithm = "RSA"
   rsa_bits  = 2048
 }
@@ -95,7 +101,7 @@ resource "tls_private_key" "client" {
 # derived from the entry in client_names) to the CA so it can be signed into a
 # certificate that the VPN endpoint will recognise as valid.
 resource "tls_cert_request" "client" {
-  for_each        = toset(var.create_certificates ? var.client_names : [])
+  for_each        = local.cert_client_names
   private_key_pem = tls_private_key.client[each.key].private_key_pem
 
   subject {
@@ -109,7 +115,7 @@ resource "tls_cert_request" "client" {
 # CA cert (root_certificate_chain_arn) to authenticate the client without a
 # username or password.
 resource "tls_locally_signed_cert" "client" {
-  for_each           = toset(var.create_certificates ? var.client_names : [])
+  for_each           = local.cert_client_names
   cert_request_pem   = tls_cert_request.client[each.key].cert_request_pem
   ca_private_key_pem = tls_private_key.ca[0].private_key_pem
   ca_cert_pem        = tls_self_signed_cert.ca[0].cert_pem
@@ -150,8 +156,8 @@ resource "aws_acm_certificate" "ca" {
 # Only created when create_certificates = true; BYO-cert users manage their own
 # key material outside Terraform.
 resource "aws_secretsmanager_secret" "client_ovpn" {
-  for_each    = toset(var.create_certificates ? var.client_names : [])
-  name        = "${var.name_prefix}-vpn-${each.key}-ovpn"
+  for_each    = local.cert_client_names
+  name_prefix = "${var.name_prefix}-vpn-${each.key}-ovpn-"
   description = "Client VPN cert and key for ${each.key}. Append SecretString directly to client-config.ovpn."
   tags        = { Name = "${var.name_prefix}-vpn-${each.key}-ovpn" }
 }
@@ -159,8 +165,8 @@ resource "aws_secretsmanager_secret" "client_ovpn" {
 # Stores the actual cert and key PEM values. Written as a separate resource so
 # Terraform can update the value independently of the secret metadata.
 resource "aws_secretsmanager_secret_version" "client_ovpn" {
-  for_each  = toset(var.create_certificates ? var.client_names : [])
-  secret_id = aws_secretsmanager_secret.client_ovpn[each.key].id
+  for_each      = local.cert_client_names
+  secret_id     = aws_secretsmanager_secret.client_ovpn[each.key].id
   secret_string = "<cert>\n${tls_locally_signed_cert.client[each.key].cert_pem}</cert>\n<key>\n${tls_private_key.client[each.key].private_key_pem}</key>\n"
 }
 
@@ -168,8 +174,8 @@ resource "aws_secretsmanager_secret_version" "client_ovpn" {
 
 # Created only when enable_connection_logging = true. Stores one log stream per
 # connection event (connect/disconnect) so operators can audit who used the VPN
-# and when. The log group is retained indefinitely by default; set a retention
-# policy manually if log storage costs are a concern.
+# and when. Retention is set to 90 days; adjust retention_in_days if you need
+# a longer audit window or want to reduce log storage costs.
 resource "aws_cloudwatch_log_group" "client_vpn" {
   count             = var.enable_connection_logging ? 1 : 0
   name              = "/${var.name_prefix}/client-vpn"

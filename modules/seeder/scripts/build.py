@@ -33,8 +33,10 @@ def build(module_dir: str) -> None:
     # install step so repeated applies in the same directory complete in seconds.
     # This matters when null_resource.build_package uses always_run = timestamp()
     # to guarantee the build runs in every Terragrunt cache directory.
-    pg8000_present  = os.path.isdir(os.path.join(package_dir, "pg8000"))
-    pymysql_present = os.path.isdir(os.path.join(package_dir, "pymysql"))
+    # Check for __init__.py rather than the directory to detect partial/corrupt
+    # installs (e.g. an interrupted pip run that left empty directory stubs).
+    pg8000_present  = os.path.isfile(os.path.join(package_dir, "pg8000", "__init__.py"))
+    pymysql_present = os.path.isfile(os.path.join(package_dir, "pymysql", "__init__.py"))
 
     if pg8000_present and pymysql_present:
         print("Dependencies already present, skipping pip install.")

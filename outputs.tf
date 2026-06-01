@@ -108,16 +108,19 @@ output "bastion_connection_guide" {
     ── Connecting to RDS via bastion ──────────────────────────────────────────
 
     Step 1 — Retrieve the database password:
-      aws secretsmanager get-secret-value --secret-id '${module.rds.db_secret_arn}' --region ${var.aws_region} --query SecretString --output text | jq -r .password
+      aws secretsmanager get-secret-value --secret-id ${module.rds.db_secret_arn} --region ${var.aws_region} --query SecretString --output text | jq -r .password
 
     Step 2 — Open the SSH tunnel (keep this terminal open):
       ssh -N -i /path/to/your-key.pem -L ${module.rds.db_port}:${module.rds.db_host}:${module.rds.db_port} ec2-user@${b.public_ip}
 
     Step 3 — Connect your DB client in a new terminal:
     %{if var.db_engine == "postgres"~}
-      psql -h localhost -p ${module.rds.db_port} -U ${var.db_username} -d ${var.db_name}
+      psql -h localhost -p ${module.rds.db_port} -U ${var.snapshot_identifier != null ? "<username-from-snapshot>" : var.db_username} -d ${var.snapshot_identifier != null ? "<dbname-from-snapshot>" : var.db_name}
     %{else~}
-      mysql -h 127.0.0.1 -P ${module.rds.db_port} -u ${var.db_username} -p ${var.db_name}
+      mysql -h 127.0.0.1 -P ${module.rds.db_port} -u ${var.snapshot_identifier != null ? "<username-from-snapshot>" : var.db_username} -p ${var.snapshot_identifier != null ? "<dbname-from-snapshot>" : var.db_name}
+    %{endif~}
+    %{if var.snapshot_identifier != null~}
+      (username and database name are inherited from the snapshot — check with: aws rds describe-db-instances --db-instance-identifier $(terraform output -raw db_instance_id) --query 'DBInstances[0].[MasterUsername,DBName]')
     %{endif~}
 
     Step 4 — Stop the bastion when done to avoid charges (~$0.005/hr running):
@@ -169,6 +172,7 @@ output "client_vpn_connection_guide" {
       aws ec2 export-client-vpn-client-configuration --client-vpn-endpoint-id ${v.endpoint_id} --region ${var.aws_region} --output text > client-config.ovpn
 
     Step 2 — Append your certificate and key to client-config.ovpn:
+              (If retrying this step, re-run Step 1 first to get a fresh base config before appending.)
     %{if var.client_vpn_create_certificates~}
     %{for name, secret_name in v.client_ovpn_secret_names~}
       For ${name}:
@@ -176,9 +180,9 @@ output "client_vpn_connection_guide" {
 
     %{endfor~}
     %{else~}
-      Embed from your EasyRSA files:
-      printf "<cert>\n%s\n</cert>\n" "$(cat pki/issued/client1.crt)" >> client-config.ovpn
-      printf "<key>\n%s\n</key>\n"   "$(cat pki/private/client1.key)" >> client-config.ovpn
+      Embed from your cert files (adjust paths to match your PKI setup):
+      printf "<cert>\n%s\n</cert>\n" "$(cat /path/to/client.crt)" >> client-config.ovpn
+      printf "<key>\n%s\n</key>\n"   "$(cat /path/to/client.key)" >> client-config.ovpn
     %{endif~}
 
     Step 3 — Import client-config.ovpn into the AWS VPN Client app and connect:
@@ -186,16 +190,16 @@ output "client_vpn_connection_guide" {
       File > Manage Profiles > Add Profile > select client-config.ovpn
 
     Step 4 — Retrieve the database password (once connected):
-      aws secretsmanager get-secret-value \
-        --secret-id ${module.rds.db_secret_arn} \
-        --region ${var.aws_region} \
-        --query SecretString --output text | jq -r .password
+      aws secretsmanager get-secret-value --secret-id ${module.rds.db_secret_arn} --region ${var.aws_region} --query SecretString --output text | jq -r .password
 
     Step 5 — Connect your DB client directly (no tunnel needed):
     %{if var.db_engine == "postgres"~}
-      psql -h ${module.rds.db_host} -p ${module.rds.db_port} -U ${var.db_username} -d ${var.db_name}
+      psql -h ${module.rds.db_host} -p ${module.rds.db_port} -U ${var.snapshot_identifier != null ? "<username-from-snapshot>" : var.db_username} -d ${var.snapshot_identifier != null ? "<dbname-from-snapshot>" : var.db_name}
     %{else~}
-      mysql -h ${module.rds.db_host} -P ${module.rds.db_port} -u ${var.db_username} -p ${var.db_name}
+      mysql -h ${module.rds.db_host} -P ${module.rds.db_port} -u ${var.snapshot_identifier != null ? "<username-from-snapshot>" : var.db_username} -p ${var.snapshot_identifier != null ? "<dbname-from-snapshot>" : var.db_name}
+    %{endif~}
+    %{if var.snapshot_identifier != null~}
+      (username and database name are inherited from the snapshot — check with: aws rds describe-db-instances --db-instance-identifier $(terraform output -raw db_instance_id) --query 'DBInstances[0].[MasterUsername,DBName]')
     %{endif~}
     GUIDE
   ])
@@ -218,6 +222,15 @@ output "client_vpn_client_key_pem" {
   description = "Map of client name to private key PEM (null when enable_client_vpn = false; empty when client_vpn_create_certificates = false). Keep secret."
   sensitive   = true
   value       = one([for v in module.client_vpn : v.client_private_key_pem])
+}
+
+# Map of client name → Secrets Manager secret name. Consuming pipelines can
+# iterate this map to retrieve and embed per-client certs without needing
+# terraform output or jq. Null when enable_client_vpn = false; empty map when
+# client_vpn_create_certificates = false.
+output "client_vpn_client_ovpn_secret_names" {
+  description = "Map of client name to Secrets Manager secret name containing the .ovpn cert+key append block (null when enable_client_vpn = false; empty when client_vpn_create_certificates = false)."
+  value       = one([for v in module.client_vpn : v.client_ovpn_secret_names])
 }
 
 # ── Databricks peering ────────────────────────────────────────────────────────

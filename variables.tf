@@ -78,7 +78,7 @@ variable "db_instance_class" {
 # connection strings should reference this name. Changing it after the
 # instance is created does NOT rename the existing database.
 variable "db_name" {
-  description = "Name of the initial database created on the instance."
+  description = "Name of the initial database created on the instance. Ignored when snapshot_identifier is set — the name is inherited from the snapshot."
   type        = string
   default     = "appdb"
 }
@@ -87,7 +87,7 @@ variable "db_name" {
 # privileges and is used by the seeder Lambda to create the users table and
 # insert rows. For real workloads, create a least-privilege app user instead.
 variable "db_username" {
-  description = "Master username."
+  description = "Master username. Ignored when snapshot_identifier is set — the username is inherited from the snapshot."
   type        = string
   default     = "dbadmin"
 }
@@ -98,12 +98,6 @@ variable "db_storage_gb" {
   description = "Allocated storage in GiB."
   type        = number
   default     = 20
-}
-
-variable "lambda_permission_boundary_arn" {
-  description = "ARN of an IAM permissions boundary to attach to the seeder Lambda execution role. Required in accounts where IAM role creation is restricted to roles with a specific boundary."
-  type        = string
-  default     = null
 }
 
 variable "snapshot_identifier" {
@@ -122,6 +116,27 @@ variable "seed_on_apply" {
   description = "Automatically invoke the seeder Lambda on every apply. Set false to deploy the Lambda without running it — useful when you want manual control over when seeding happens."
   type        = bool
   default     = true
+}
+
+variable "lambda_permission_boundary_arn" {
+  description = "ARN of an IAM permissions boundary to attach to the seeder Lambda execution role. Required in accounts where IAM role creation is restricted to roles with a specific boundary."
+  type        = string
+  default     = null
+}
+
+# How many rows to insert into the `users` table. The seeder batches inserts
+# in groups of 500 to avoid transaction timeouts. Lambda has a hard 15-minute
+# execution limit; in practice ~500 k rows is safe, with ~1 M rows being the
+# theoretical upper bound before the timeout is likely to be hit.
+variable "row_count" {
+  description = "Number of rows to seed into the users table. Max ~500 k before Lambda 15-min timeout."
+  type        = number
+  default     = 1000
+
+  validation {
+    condition     = var.row_count >= 1 && var.row_count <= 1000000
+    error_message = "row_count must be between 1 and 1,000,000."
+  }
 }
 
 # When true, `terraform destroy` skips creating a final DB snapshot before
@@ -288,19 +303,3 @@ variable "databricks_peering_auto_accept" {
   default     = false
 }
 
-# ── Seeding ───────────────────────────────────────────────────────────────────
-
-# How many rows to insert into the `users` table. The seeder batches inserts
-# in groups of 500 to avoid transaction timeouts. Lambda has a hard 15-minute
-# execution limit; in practice ~500 k rows is safe, with ~1 M rows being the
-# theoretical upper bound before the timeout is likely to be hit.
-variable "row_count" {
-  description = "Number of rows to seed into the users table. Max ~500 k before Lambda 15-min timeout."
-  type        = number
-  default     = 1000
-
-  validation {
-    condition     = var.row_count >= 1 && var.row_count <= 1000000
-    error_message = "row_count must be between 1 and 1,000,000."
-  }
-}
