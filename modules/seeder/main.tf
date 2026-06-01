@@ -1,12 +1,3 @@
-locals {
-  # Source-file hashes used by invoke_seeder to detect handler/dependency changes.
-  # Not used by build_package (which always runs — see below).
-  build_trigger = join("-", [
-    filemd5("${path.module}/lambda/seed.py"),
-    filemd5("${path.module}/lambda/requirements.txt"),
-  ])
-}
-
 # ── IAM ───────────────────────────────────────────────────────────────────────
 
 # The IAM execution role that the Lambda function runs as. All AWS API calls
