@@ -279,4 +279,10 @@ resource "aws_ec2_client_vpn_authorization_rule" "vpc" {
   target_network_cidr    = var.vpc_cidr
   authorize_all_groups   = true
   description            = "Allow all authenticated VPN clients to reach VPC resources"
+
+  timeouts {
+    create = "30m"
+    delete = "30m"
+  }
+  
 }
