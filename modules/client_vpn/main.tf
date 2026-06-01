@@ -284,5 +284,5 @@ resource "aws_ec2_client_vpn_authorization_rule" "vpc" {
     create = "30m"
     delete = "30m"
   }
-  
+
 }
